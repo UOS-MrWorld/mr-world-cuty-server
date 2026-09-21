@@ -18,10 +18,10 @@ Mr. World는 여행 목적과 테마에 맞춰 원하는 여행 상품을 선택
 
 ## 기술 스택
 
-- Java 17 / Spring Boot 4
+- Java 21 / Spring Boot 4.0
 - Spring Data JPA, Spring Security (JWT)
 - MySQL (로컬 개발/실행), H2 (테스트)
-- Maven
+- Gradle 9 (Gradle Wrapper 사용, 별도 설치 불필요)
 
 ## 패키지 구조
 
@@ -60,9 +60,17 @@ com.mrworld.yaho/
 
 ## 로컬 실행
 
+사전 준비: **JDK 21**, 로컬 **MySQL 실행 + `yaho` 데이터베이스 생성** (`CREATE DATABASE yaho;`)
+
 ```bash
-./mvnw spring-boot:run
+# macOS / Linux / Git Bash
+./gradlew bootRun
+
+# Windows (PowerShell / cmd)
+.\gradlew.bat bootRun
 ```
+
+Gradle은 프로젝트에 포함된 Wrapper(`gradlew`)가 지정 버전(9.7.1)을 자동으로 내려받아 쓴다. 처음 실행할 때만 시간이 걸린다.
 
 MySQL 접속 정보는 환경변수로 넣는다. (`src/main/resources/application.yml` 참고)
 
@@ -72,4 +80,15 @@ export DB_PASSWORD=your-local-password
 export JWT_SECRET=아무-임의-문자열
 ```
 
-테스트(`./mvnw test`)는 MySQL 없이 H2 인메모리 DB로 둔다.
+테스트는 MySQL 없이 H2 인메모리 DB로 돈다.
+
+```bash
+./gradlew test
+```
+
+## 빌드
+
+```bash
+./gradlew build      # 컴파일 + 테스트 + jar 생성 (build/libs/)
+./gradlew clean      # build/ 폴더 삭제
+```
