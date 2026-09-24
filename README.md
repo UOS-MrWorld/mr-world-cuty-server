@@ -66,7 +66,7 @@ com.mrworld.yaho/
 
 ## 로컬 실행
 
-사전 준비: **JDK 21**, 로컬 **MySQL 실행 + `yaho` 데이터베이스 생성** (`CREATE DATABASE yaho;`)
+사전 준비: **JDK 21**, 로컬 **MySQL 실행 + `cuty` 데이터베이스 생성** (`CREATE DATABASE cuty;`)
 
 ```bash
 # macOS / Linux / Git Bash
