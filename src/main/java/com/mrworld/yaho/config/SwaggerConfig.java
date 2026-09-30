@@ -30,8 +30,8 @@ public class SwaggerConfig {
 
     private Info apiInfo() {
         return new Info()
-                .title("UOS 대전광")
-                .description("대전광 API 명세서")
+                .title("Mr.CUTY")
+                .description("소프트웨어공학 프로젝트 난쏘공: Mr.CUTY API 명세서")
                 .version("1.0.0");
     }
 }
