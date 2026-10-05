@@ -41,7 +41,8 @@ com.mrworld.yaho/
 ├── auth/       # 회원가입 / 로그인 / 토큰 재발급 / 로그아웃
 ├── member/     # 내 회원정보 조회·수정
 ├── tour/       # 여행상품 — 고객용 목록·상세·음성 검색 + 직원용 등록/수정/현황 조회
-├── booking/    # 가격 계산, 여행신청, PENDING 예약 수정, 취소, 결제(Mock), 여행확정(결제 완료 3명 이상 시 자동 확정), 확정 SMS 알림, 이전 여행 이력
+├── booking/    # 여행신청, PENDING 예약 수정, 취소, 여행확정(결제 완료 3명 이상 시 자동 확정), 이전 여행 이력
+├── payment/    # Mock 결제, 인원 미달 시 환불. 예약을 PAID로 바꾸는 쪽이라 payment → booking 방향으로만 참조한다
 ├── inventory/  # 직원용 재고 관리, 여행 확정 시 재고 차감
 └── customer/   # 직원용 고객 관리, 단골 등급 정책·할인 적용
 ```
@@ -57,7 +58,7 @@ API 경로는 권한별로 나뉜다. 인증 없이 쓰는 `/api/v1/auth/**`, �
 | `tour` | `TourController` | `/api/v1/customer/tours/**` (목록, 상세, `voice-search`) |
 | `tour` | `StaffTourController` | `/api/v1/staff/tours/**` (등록, 수정, 현황 목록·상세) |
 | `booking` | `BookingController` | `/api/v1/customer/tours/{tourId}/quote`, `/api/v1/customer/bookings/**` (신청, 수정, 목록, 상세, `cancel`), `/api/v1/customer/travel-history` |
-| `booking` | `PaymentController` | `/api/v1/customer/payments` |
+| `payment` | `PaymentController` | `/api/v1/customer/payments` |
 | `inventory` | `InventoryController` | `/api/v1/staff/inventory/**` (등록, 조회, 수정) |
 | `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-discount`, `loyalty-discount/by-grade`) |
 | `customer` | `LoyaltyPolicyController` | `/api/v1/staff/loyalty-policy` |
@@ -67,8 +68,9 @@ API 경로는 권한별로 나뉜다. 인증 없이 쓰는 `/api/v1/auth/**`, �
 ### 서버 내부 비즈니스 로직 (별도 API 없음)
 
 - **여행 자동 확정**: 투어 시작 3일 전 마감 시점에 `PAID` 예약의 `guestCount` 합이 3명 이상이면 `CONFIRMED`, 미달이면 `CANCELLED`
-- **확정 SMS 발송**: 확정된 상품의 신청 고객 연락처로만 발송
+- **인원 미달 환불**: 미달로 취소되면 해당 투어의 성공 결제를 `REFUNDED`, 예약을 `CANCELLED`로 변경
 - **재고 차감**: 확정 시 `TOUR_GIFT.quantityPerGuest × 전체 확정 인원`만큼 재고 차감
+- **여행 완료 처리**: 여행 종료 후 투어를 `COMPLETED`로 바꾸고 완료 여행 횟수에 따라 단골 등급을 자동 산정
 
 ### 주요 규칙
 
