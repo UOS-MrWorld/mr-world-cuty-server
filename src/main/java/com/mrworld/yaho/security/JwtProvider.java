@@ -1,5 +1,6 @@
 package com.mrworld.yaho.security;
 
+import com.mrworld.yaho.member.Member;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -14,6 +15,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 @Component
@@ -35,20 +38,20 @@ public class JwtProvider {
         key = Keys.hmacShaKeyFor(secretKeyBytes);
     }
 
-    public String generateAccessToken(Long memberId, String role) {
-        return generateToken(memberId, role, "access", accessExpirationTime);
+    public String generateAccessToken(Member member) {
+        return generateToken(member, "access", accessExpirationTime);
     }
 
-    public String generateRefreshToken(Long memberId, String role) {
-        return generateToken(memberId, role, "refresh", refreshAccessExpirationTime);
+    public String generateRefreshToken(Member member) {
+        return generateToken(member, "refresh", refreshAccessExpirationTime);
     }
 
-    private String generateToken(Long memberId, String role, String type, long expirationTime) {
+    private String generateToken(Member member, String type, long expirationTime) {
         Date now = new Date();
 
         return Jwts.builder()
-                .subject(String.valueOf(memberId))
-                .claim("role", role)
+                .subject(String.valueOf(member.getId()))
+                .claim("role", member.getRole().name())
                 .claim("type", type)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationTime))
@@ -87,5 +90,11 @@ public class JwtProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    public LocalDateTime getExpiresAt(String token) {
+        return parseClaims(token).getExpiration().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
     }
 }

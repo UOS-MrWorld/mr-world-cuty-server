@@ -1,5 +1,6 @@
 package com.mrworld.yaho.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.mrworld.yaho.security.JwtProvider;
 import com.mrworld.yaho.security.JwtAuthenticationFilter;
 
+import java.io.IOException;
 import java.util.List;
 
 @Configuration
@@ -35,13 +37,23 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint((request, response, e) ->
+                                writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "인증이 필요합니다."))
+                        .accessDeniedHandler((request, response, e) ->
+                                writeError(response, HttpServletResponse.SC_FORBIDDEN, "접근 권한이 없습니다."))
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/auth/**",
+                                "/api/v1/auth/signup",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/refresh",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        .requestMatchers("/api/v1/customer/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/v1/staff/**").hasRole("STAFF")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
@@ -49,6 +61,12 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .build();
+    }
+
+    private void writeError(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\",\"code\":" + status + "}");
     }
 
     @Bean
