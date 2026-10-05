@@ -39,30 +39,45 @@ com.mrworld.yaho/
 ├── common/     # 아직 비어있음. 공통 응답 포맷, 예외 처리, 공용 Enum이 들어갈 자리
 │
 ├── auth/       # 회원가입 / 로그인 / 토큰 재발급 / 로그아웃
-├── member/     # 내 회원정보 조회·수정, 이전 여행 이력
-├── tour/       # 여행상품 — 고객용 조회/검색 + 직원용 등록/수정/삭제/현황
-├── wish/       # 찜 등록/해제/목록
-├── booking/    # 여행신청, 취소, 결제, 여행확정(최소 인원 도달 시 자동 확정) 로직까지 포함
+├── member/     # 내 회원정보 조회·수정
+├── tour/       # 여행상품 — 고객용 목록·상세·음성 검색 + 직원용 등록/수정/현황 조회
+├── booking/    # 가격 계산, 여행신청, PENDING 예약 수정, 취소, 결제(Mock), 여행확정(결제 완료 3명 이상 시 자동 확정), 확정 SMS 알림, 이전 여행 이력
 ├── inventory/  # 직원용 재고 관리, 여행 확정 시 재고 차감
-└── customer/   # 직원용 고객 관리, 단골 등급 정책
+└── customer/   # 직원용 고객 관리, 단골 등급 정책·할인 적용
 ```
 
 각 도메인 패키지는 `Controller`(엔드포인트)와 `Service`(비즈니스 로직) 두 클래스만 있는 상태다. `Repository`/엔티티는 데이터 모델이 정해지는 대로 같은 패키지 안에 추가하면 된다.
 
+API 경로는 권한별로 나뉜다. 인증 없이 쓰는 `/api/v1/auth/**`, 로그인한 본인 정보용 `/api/v1/members/me`, 고객용 `/api/v1/customer/**`, 직원용 `/api/v1/staff/**`이다. 직원용 경로 보호는 컨트롤러 분리가 아니라 `SecurityConfig`에서 권한을 걸어서 한다.
+
 | 패키지 | 클래스 | 매핑되는 API |
 | --- | --- | --- |
-| `auth` | `AuthController` | `/api/v1/auth/**` |
-| `member` | `MemberController` | `/api/v1/members/**` |
-| `tour` | `TourController` | `/api/v1/tours/**` (고객용) |
-| `tour` | `StaffTourController` | `/api/v1/staff/tours/**` (직원용) |
-| `wish` | `WishController` | `/api/v1/wishes/**` |
-| `booking` | `BookingController` | `/api/v1/bookings/**` |
-| `booking` | `PaymentController` | `/api/v1/payments` |
-| `inventory` | `InventoryController` | `/api/v1/staff/inventory/**` |
-| `customer` | `CustomerController` | `/api/v1/staff/customers/**` |
+| `auth` | `AuthController` | `/api/v1/auth/**` (signup, login, refresh, logout) |
+| `member` | `MemberController` | `/api/v1/members/me` (조회, 수정) |
+| `tour` | `TourController` | `/api/v1/customer/tours/**` (목록, 상세, `voice-search`) |
+| `tour` | `StaffTourController` | `/api/v1/staff/tours/**` (등록, 수정, 현황 목록·상세) |
+| `booking` | `BookingController` | `/api/v1/customer/tours/{tourId}/quote`, `/api/v1/customer/bookings/**` (신청, 수정, 목록, 상세, `cancel`), `/api/v1/customer/travel-history` |
+| `booking` | `PaymentController` | `/api/v1/customer/payments` |
+| `inventory` | `InventoryController` | `/api/v1/staff/inventory/**` (등록, 조회, 수정) |
+| `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-discount`, `loyalty-discount/by-grade`) |
 | `customer` | `LoyaltyPolicyController` | `/api/v1/staff/loyalty-policy` |
 
 같은 패키지 안에 고객용/직원용 컨트롤러가 같이 있는 경우(`tour`, `customer`)는 데이터(엔티티)를 공유하되 권한 체계가 달라서 클래스만 분리해뒀다.
+
+### 서버 내부 비즈니스 로직 (별도 API 없음)
+
+- **여행 자동 확정**: 투어 시작 3일 전 마감 시점에 `PAID` 예약의 `guestCount` 합이 3명 이상이면 `CONFIRMED`, 미달이면 `CANCELLED`
+- **확정 SMS 발송**: 확정된 상품의 신청 고객 연락처로만 발송
+- **재고 차감**: 확정 시 `TOUR_GIFT.quantityPerGuest × 전체 확정 인원`만큼 재고 차감
+
+### 주요 규칙
+
+- 예약 상태: `PENDING`(결제 전, 장바구니 역할) → `PAID` → `CONFIRMED` / `CANCELLED`. `PENDING` 예약만 수정 가능
+- 투어 등급: Classic / Grand / Premium. 허니문·효도 투어는 Grand 이상만 선택 가능
+- 취소는 출발 3일 전까지만 가능
+- 결제는 서버에서 계산한 최종 금액 기준의 Mock 결제이며 중복 결제를 막는다
+- 이전 여행 목록은 본인의 결제 완료 예약 중 투어가 `COMPLETED`인 것만 최근 순으로 조회
+- 단골 등급 기준과 할인율은 코드에 고정된 값을 사용하며, 직원이 고객별 또는 등급별로 할인을 적용한다
 
 ## 로컬 실행
 
@@ -78,12 +93,15 @@ com.mrworld.yaho/
 
 Gradle은 프로젝트에 포함된 Wrapper(`gradlew`)가 지정 버전(9.7.1)을 자동으로 내려받아 쓴다. 처음 실행할 때만 시간이 걸린다.
 
-MySQL 접속 정보는 환경변수로 넣는다. (`src/main/resources/application.yml` 참고)
+MySQL 접속 정보와 JWT secret은 환경변수로 넣는다. (`src/main/resources/application.properties` 참고)
+
+### .env.example
 
 ```bash
-export DB_USERNAME=root
-export DB_PASSWORD=your-local-password
-export JWT_SECRET=아무-임의-문자열
+DB_URL=
+DB_USERNAME=root
+DB_PASSWORD=
+JWT_SECRET=
 ```
 
 테스트는 MySQL 없이 H2 인메모리 DB로 돈다.
