@@ -28,7 +28,7 @@ public class TourService {
         return toListResponse(tourRepository.findByTourStatusIn(VISIBLE_STATUSES, request.toPageable()));
     }
 
-    public TourDetailResponse getTour(Long tourId) {
+    public TourDetailResponse getTourDetails(Long tourId) {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
 

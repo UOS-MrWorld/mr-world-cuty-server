@@ -39,14 +39,14 @@ class TourServiceTest {
     void 존재하지_않는_투어_상세는_예외가_발생한다() {
         when(tourRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> tourService.getTour(99L)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> tourService.getTourDetails(99L)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
     void 상세_조회는_테마에_따른_선택_가능_등급을_포함한다() {
         when(tourRepository.findById(1L)).thenReturn(Optional.of(tour(Tour.Theme.HEALING)));
 
-        TourDetailResponse response = tourService.getTour(1L);
+        TourDetailResponse response = tourService.getTourDetails(1L);
 
         assertThat(response.getTourId()).isEqualTo(1L);
         assertThat(response.getAvailableTourLevels()).containsExactly(Tour.TourLevel.GRAND, Tour.TourLevel.PREMIUM);
