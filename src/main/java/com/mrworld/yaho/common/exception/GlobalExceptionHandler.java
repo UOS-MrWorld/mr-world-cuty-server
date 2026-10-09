@@ -37,6 +37,11 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ResultDto> handleNotFound(NotFoundException e) {
+        return response(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ResultDto> handleConflict(ConflictException e) {
         return response(HttpStatus.CONFLICT, e.getMessage());
