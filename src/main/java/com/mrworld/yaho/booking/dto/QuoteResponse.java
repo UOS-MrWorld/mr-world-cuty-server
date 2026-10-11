@@ -1,4 +1,4 @@
-package com.mrworld.yaho.tour.dto;
+package com.mrworld.yaho.booking.dto;
 
 import lombok.Builder;
 import lombok.Getter;

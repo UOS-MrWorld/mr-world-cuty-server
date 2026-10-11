@@ -1,4 +1,4 @@
-package com.mrworld.yaho.tour.dto;
+package com.mrworld.yaho.booking.dto;
 
 import com.mrworld.yaho.common.enums.HotelGrade;
 import com.mrworld.yaho.common.enums.MealType;
