@@ -3,8 +3,12 @@ package com.mrworld.yaho.auth;
 import com.mrworld.yaho.auth.dto.*;
 import com.mrworld.yaho.common.exception.AuthenticationFailedException;
 import com.mrworld.yaho.common.exception.ConflictException;
+import com.mrworld.yaho.customer.Customer;
+import com.mrworld.yaho.customer.CustomerRepository;
 import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
+import com.mrworld.yaho.member.Staff;
+import com.mrworld.yaho.member.StaffRepository;
 import com.mrworld.yaho.security.JwtProvider;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,6 +24,8 @@ public class AuthService {
     private static final String INVALID_REFRESH_TOKEN = "유효하지 않은 refresh token입니다.";
 
     private final MemberRepository memberRepository;
+    private final CustomerRepository customerRepository;
+    private final StaffRepository staffRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
@@ -50,6 +56,13 @@ public class AuthService {
             savedMember = memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {
             throw new ConflictException(LOGIN_ID_DUPLICATED);
+        }
+
+        // 역할별 정보는 member의 id를 그대로 식별자로 쓰며, 회원 저장과 같은 트랜잭션에서 함께 저장한다.
+        if(savedMember.getRole() == Member.Role.CUSTOMER) {
+            customerRepository.save(Customer.create(savedMember.getId()));
+        } else if(savedMember.getRole() == Member.Role.STAFF) {
+            staffRepository.save(Staff.create(savedMember.getId()));
         }
 
         return new SignUpResponse(
