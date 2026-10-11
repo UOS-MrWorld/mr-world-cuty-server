@@ -32,6 +32,9 @@ class TourControllerTest {
     private TourRepository tourRepository;
 
     @Autowired
+    private DrinkOptionRepository drinkOptionRepository;
+
+    @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
     private Tour golfTour;
@@ -39,6 +42,8 @@ class TourControllerTest {
     @BeforeEach
     void setUp() {
         tourRepository.deleteAll();
+        drinkOptionRepository.deleteAll();
+        drinkOptionRepository.save(DrinkOption.create("COFFEE", 5000));
         golfTour = tourRepository.save(Tour.create(Theme.GOLF, "골프 챌린지 투어", "유명 골프 리조트",
                 LocalDate.parse("2026-10-20"), LocalDate.parse("2026-10-23"), 500000, Transport.PREMIUM_VAN_10));
         tourRepository.save(Tour.create(Theme.HEALING, "효도 힐링 투어", "제주 온천 휴양",
@@ -110,7 +115,10 @@ class TourControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tourId").value(golfTour.getTourId()))
                 .andExpect(jsonPath("$.defaultTransport").value("PREMIUM_VAN_10"))
-                .andExpect(jsonPath("$.availableTourLevels.length()").value(3));
+                .andExpect(jsonPath("$.availableTourLevels.length()").value(3))
+                .andExpect(jsonPath("$.drinkOptions.length()").value(1))
+                .andExpect(jsonPath("$.drinkOptions[0].drinkName").value("COFFEE"))
+                .andExpect(jsonPath("$.drinkOptions[0].drinkPrice").value(5000));
     }
 
     @Test

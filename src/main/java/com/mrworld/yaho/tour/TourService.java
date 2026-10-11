@@ -2,6 +2,7 @@ package com.mrworld.yaho.tour;
 
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.exception.NotFoundException;
+import com.mrworld.yaho.tour.dto.DrinkOptionResponse;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
@@ -9,6 +10,7 @@ import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ public class TourService {
             List.of(TourStatus.RECRUITING, TourStatus.CONFIRMED);
 
     private final TourRepository tourRepository;
+    private final DrinkOptionRepository drinkOptionRepository;
 
     public TourListResponse getTours(TourListRequest request) {
         return toListResponse(tourRepository.findByTourStatusIn(VISIBLE_STATUSES, request.toPageable()));
@@ -44,6 +47,13 @@ public class TourService {
                 .defaultTransport(tour.getDefaultTransport())
                 .tourStatus(tour.getTourStatus())
                 .availableTourLevels(tour.availableLevels())
+                .drinkOptions(drinkOptionRepository.findAll(Sort.by("optionId")).stream()
+                        .map(drinkOption -> DrinkOptionResponse.builder()
+                                .optionId(drinkOption.getOptionId())
+                                .drinkName(drinkOption.getDrinkName())
+                                .drinkPrice(drinkOption.getDrinkPrice())
+                                .build())
+                        .toList())
                 .build();
     }
 
