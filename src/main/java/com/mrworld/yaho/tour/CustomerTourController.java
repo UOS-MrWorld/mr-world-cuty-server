@@ -1,12 +1,13 @@
 package com.mrworld.yaho.tour;
 
+import com.mrworld.yaho.booking.BookingService;
+import com.mrworld.yaho.booking.dto.QuoteRequest;
+import com.mrworld.yaho.booking.dto.QuoteResponse;
 import com.mrworld.yaho.common.dto.ResultDto;
 import com.mrworld.yaho.config.SwaggerExamples;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
-import com.mrworld.yaho.tour.dto.QuoteRequest;
-import com.mrworld.yaho.tour.dto.QuoteResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Tour", description = "고객용 여행 상품 조회/검색 API")
 public class CustomerTourController {
     private final TourService tourService;
+    private final BookingService bookingService;
 
     @GetMapping
     @Operation(summary = "여행 상품 목록 조회", description = "고객이 조회 가능한 여행 상품 목록을 페이지 단위로 조회합니다.")
@@ -165,6 +167,6 @@ public class CustomerTourController {
             @RequestBody @Valid QuoteRequest request
     ) {
         Long customerId = Long.valueOf(userDetails.getUsername());
-        return ResponseEntity.ok(tourService.getQuote(tourId, customerId, request));
+        return ResponseEntity.ok(bookingService.getQuote(tourId, customerId, request));
     }
 }
