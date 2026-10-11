@@ -1,6 +1,6 @@
 package com.mrworld.yaho.auth.dto;
 
-import com.mrworld.yaho.member.Member;
+import com.mrworld.yaho.common.enums.Role;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -28,5 +28,5 @@ public class SignUpRequest {
     private String address;
 
     @NotNull(message = "사용자 역할은 필수 항목입니다.")
-    private Member.Role role;
+    private Role role;
 }

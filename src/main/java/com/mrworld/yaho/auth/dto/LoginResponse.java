@@ -1,6 +1,6 @@
 package com.mrworld.yaho.auth.dto;
 
-import com.mrworld.yaho.member.Member;
+import com.mrworld.yaho.common.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -11,7 +11,7 @@ public class LoginResponse {
 
     private String memberName;
 
-    private Member.Role role;
+    private Role role;
 
     private String accessToken;
 

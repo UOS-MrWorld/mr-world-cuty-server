@@ -1,5 +1,8 @@
 package com.mrworld.yaho.tour;
 
+import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.enums.TourStatus;
+import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
@@ -28,8 +31,8 @@ import java.util.stream.Collectors;
 public class TourService {
 
     // 고객에게는 모집 중이거나 확정된 투어만 노출한다.
-    private static final List<Tour.Status> VISIBLE_STATUSES =
-            List.of(Tour.Status.RECRUITING, Tour.Status.CONFIRMED);
+    private static final List<TourStatus> VISIBLE_STATUSES =
+            List.of(TourStatus.RECRUITING, TourStatus.CONFIRMED);
 
     // 투어 시작 7일 전까지만 예약할 수 있다.
     private static final int BOOKING_CLOSE_DAYS_BEFORE_START = 7;
@@ -82,7 +85,7 @@ public class TourService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
 
-        if (tour.getTourStatus() != Tour.Status.RECRUITING) {
+        if (tour.getTourStatus() != TourStatus.RECRUITING) {
             throw new ConflictException("모집 중인 투어가 아닙니다.");
         }
         if (LocalDate.now().isAfter(tour.getStartDate().minusDays(BOOKING_CLOSE_DAYS_BEFORE_START))) {
@@ -93,10 +96,10 @@ public class TourService {
         }
 
         int guestCount = request.getGuestCount();
-        if (tour.getTheme() == Tour.Theme.HONEYMOON && guestCount != HONEYMOON_GUEST_COUNT) {
+        if (tour.getTheme() == Theme.HONEYMOON && guestCount != HONEYMOON_GUEST_COUNT) {
             throw new IllegalArgumentException("허니문 투어는 2명만 예약할 수 있습니다.");
         }
-        if (request.getTransport() == Tour.Transport.PREMIUM_CAR_2 && guestCount > CAR_2_MAX_GUEST_COUNT) {
+        if (request.getTransport() == Transport.PREMIUM_CAR_2 && guestCount > CAR_2_MAX_GUEST_COUNT) {
             throw new IllegalArgumentException("2인 차량은 3명 이상 예약에 선택할 수 없습니다.");
         }
 

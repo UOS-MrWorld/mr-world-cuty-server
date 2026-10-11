@@ -1,6 +1,7 @@
 package com.mrworld.yaho.auth;
 
 import com.mrworld.yaho.auth.dto.*;
+import com.mrworld.yaho.common.enums.Role;
 import com.mrworld.yaho.common.exception.AuthenticationFailedException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.customer.Customer;
@@ -59,9 +60,9 @@ public class AuthService {
         }
 
         // 역할별 정보는 member의 id를 그대로 식별자로 쓰며, 회원 저장과 같은 트랜잭션에서 함께 저장한다.
-        if(savedMember.getRole() == Member.Role.CUSTOMER) {
+        if(savedMember.getRole() == Role.CUSTOMER) {
             customerRepository.save(Customer.create(savedMember.getId()));
-        } else if(savedMember.getRole() == Member.Role.STAFF) {
+        } else if(savedMember.getRole() == Role.STAFF) {
             staffRepository.save(Staff.create(savedMember.getId()));
         }
 

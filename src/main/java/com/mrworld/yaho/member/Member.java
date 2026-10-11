@@ -1,5 +1,6 @@
 package com.mrworld.yaho.member;
 
+import com.mrworld.yaho.common.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,11 +19,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class Member {
-
-    public enum Role {
-        CUSTOMER,
-        STAFF
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
