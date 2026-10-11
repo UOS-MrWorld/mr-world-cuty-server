@@ -8,6 +8,7 @@ import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
 import com.mrworld.yaho.member.Member;
+import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class TourControllerQuoteTest {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
 
     @Autowired
     private DrinkOptionRepository drinkOptionRepository;
@@ -99,13 +103,16 @@ class TourControllerQuoteTest {
 
     @Test
     void 할인이_적용된_단골_고객은_할인율이_반영된다() throws Exception {
-        Customer customer = Customer.create(MEMBER_ID);
+        Member member = memberRepository.save(Member.create(
+                "vip-" + java.util.UUID.randomUUID(), "pw", "단골", "010-0000-0000", "서울", Role.CUSTOMER));
+        Customer customer = Customer.create(member);
         ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
         ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
         customerRepository.save(customer);
 
         mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
-                        .header("Authorization", bearer(Role.CUSTOMER))
+                        .header("Authorization",
+                                "Bearer " + jwtTokenProvider.createToken(member.getMemberId(), Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON).content(body(2)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.discountRate").value(10))

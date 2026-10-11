@@ -5,6 +5,7 @@ import com.mrworld.yaho.booking.dto.QuoteResponse;
 import com.mrworld.yaho.common.enums.HotelGrade;
 import com.mrworld.yaho.common.enums.LoyaltyGrade;
 import com.mrworld.yaho.common.enums.MealType;
+import com.mrworld.yaho.common.enums.Role;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.TourStatus;
@@ -13,6 +14,7 @@ import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
+import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.tour.DrinkOption;
 import com.mrworld.yaho.tour.DrinkOptionRepository;
 import com.mrworld.yaho.tour.Tour;
@@ -84,7 +86,7 @@ class BookingServiceTest {
     @Test
     void 할인이_적용된_고객은_등급_할인율로_예상_결제_금액을_계산한다() {
         when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Theme.GOLF)));
-        Customer customer = Customer.create(7L);
+        Customer customer = Customer.create(member(7L));
         ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
         ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
         when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
@@ -100,7 +102,7 @@ class BookingServiceTest {
     @Test
     void 할인이_적용되지_않은_고객은_할인율이_0이다() {
         when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Theme.GOLF)));
-        Customer customer = Customer.create(7L);
+        Customer customer = Customer.create(member(7L));
         ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
         when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
 
@@ -185,6 +187,12 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.getQuote(1L, 7L, request))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private Member member(Long memberId) {
+        Member member = Member.create("user" + memberId, "pw", "테스터", "010-0000-0000", "서울", Role.CUSTOMER);
+        ReflectionTestUtils.setField(member, "memberId", memberId);
+        return member;
     }
 
     // 예약 마감 전(시작 30일 전)인 투어. 기본가는 1인 500,000원이다.
