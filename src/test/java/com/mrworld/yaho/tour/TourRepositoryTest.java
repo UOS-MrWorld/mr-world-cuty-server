@@ -43,6 +43,16 @@ class TourRepositoryTest {
     }
 
     @Test
+    void 상태와_시작일이_모두_일치하는_투어를_조회한다() {
+        assertThat(tourRepository.findAllByTourStatusAndStartDate(TourStatus.RECRUITING, LocalDate.parse("2026-10-20")))
+                .extracting(Tour::getTourName).containsExactlyInAnyOrder("골프 챌린지 투어", "효도 힐링 투어");
+        assertThat(tourRepository.findAllByTourStatusAndStartDate(TourStatus.CANCELLED, LocalDate.parse("2026-10-20")))
+                .extracting(Tour::getTourName).containsExactly("취소된 골프 투어");
+        assertThat(tourRepository.findAllByTourStatusAndStartDate(TourStatus.RECRUITING, LocalDate.parse("2026-12-01")))
+                .isEmpty();
+    }
+
+    @Test
     void 조건이_없으면_노출_가능한_상품을_모두_검색한다() {
         assertThat(search(null, null, null, null)).hasSize(3);
     }
