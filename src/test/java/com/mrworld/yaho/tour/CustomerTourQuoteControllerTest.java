@@ -62,13 +62,13 @@ class CustomerTourQuoteControllerTest {
 
     @Test
     void 토큰이_없으면_401이다() throws Exception {
-        mockMvc.perform(post(quoteUrl(golfTour.getId())).contentType(MediaType.APPLICATION_JSON).content(body(2)))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId())).contentType(MediaType.APPLICATION_JSON).content(body(2)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void 직원_토큰이면_403이다() throws Exception {
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.STAFF))
                         .contentType(MediaType.APPLICATION_JSON).content(body(2)))
                 .andExpect(status().isForbidden());
@@ -76,7 +76,7 @@ class CustomerTourQuoteControllerTest {
 
     @Test
     void 가격을_계산한다() throws Exception {
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -88,7 +88,7 @@ class CustomerTourQuoteControllerTest {
                                   "transport": "PREMIUM_VAN_10",
                                   "drinkOptions": [{"optionId": %d, "quantity": 2}]
                                 }
-                                """.formatted(coffee.getId())))
+                                """.formatted(coffee.getOptionId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.basePrice").value(1_000_000))
                 .andExpect(jsonPath("$.optionPrice").value(410_000))
@@ -104,7 +104,7 @@ class CustomerTourQuoteControllerTest {
         ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
         customerRepository.save(customer);
 
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON).content(body(2)))
                 .andExpect(status().isOk())
@@ -115,13 +115,13 @@ class CustomerTourQuoteControllerTest {
 
     @Test
     void 필수값이_없거나_인원이_1_미만이면_400이다() throws Exception {
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(400));
 
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON).content(body(0)))
                 .andExpect(status().isBadRequest());
@@ -129,7 +129,7 @@ class CustomerTourQuoteControllerTest {
 
     @Test
     void 알_수_없는_enum_값은_400이다() throws Exception {
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(2).replace("FIVE_STAR", "SIX_STAR")))
@@ -150,7 +150,7 @@ class CustomerTourQuoteControllerTest {
         ReflectionTestUtils.setField(golfTour, "tourStatus", TourStatus.CANCELLED);
         tourRepository.save(golfTour);
 
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON).content(body(2)))
                 .andExpect(status().isConflict())
@@ -163,7 +163,7 @@ class CustomerTourQuoteControllerTest {
         ReflectionTestUtils.setField(golfTour, "endDate", LocalDate.now().plusDays(6));
         tourRepository.save(golfTour);
 
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON).content(body(2)))
                 .andExpect(status().isBadRequest());
@@ -171,7 +171,7 @@ class CustomerTourQuoteControllerTest {
 
     @Test
     void 존재하지_않는_음료_옵션은_400이다() throws Exception {
-        mockMvc.perform(post(quoteUrl(golfTour.getId()))
+        mockMvc.perform(post(quoteUrl(golfTour.getTourId()))
                         .header("Authorization", bearer(Role.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(2).replace("\"drinkOptions\": []",
@@ -199,7 +199,7 @@ class CustomerTourQuoteControllerTest {
 
     private String bearer(Role role) {
         Member member = Member.create("tester", "pw", "테스터", "010-0000-0000", "서울", role);
-        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
-        return "Bearer " + jwtTokenProvider.createToken(member.getId(), member.getRole());
+        ReflectionTestUtils.setField(member, "memberId", MEMBER_ID);
+        return "Bearer " + jwtTokenProvider.createToken(member.getMemberId(), member.getRole());
     }
 }

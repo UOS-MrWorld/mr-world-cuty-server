@@ -23,7 +23,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
                    or lower(t.tourName) like lower(concat('%', :keyword, '%'))
                    or lower(t.description) like lower(concat('%', :keyword, '%')))
               and (:theme is null or t.theme = :theme)
-              and (:maxPrice is null or t.basePrice <= :maxPrice)
+              and (:maxPrice is null or t.price <= :maxPrice)
               and (:departureDate is null or t.startDate = :departureDate)
             """)
     Page<Tour> search(

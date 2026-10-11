@@ -17,6 +17,6 @@ public class TourListRequest {
     private int size = 20;
 
     public Pageable toPageable() {
-        return PageRequest.of(page, size, Sort.by("startDate", "id"));
+        return PageRequest.of(page, size, Sort.by("startDate", "tourId"));
     }
 }

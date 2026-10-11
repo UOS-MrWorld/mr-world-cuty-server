@@ -52,13 +52,13 @@ public class TourService {
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
 
         return TourDetailResponse.builder()
-                .tourId(tour.getId())
+                .tourId(tour.getTourId())
                 .theme(tour.getTheme())
                 .tourName(tour.getTourName())
                 .description(tour.getDescription())
                 .startDate(tour.getStartDate())
                 .endDate(tour.getEndDate())
-                .basePrice(tour.getBasePrice())
+                .basePrice(tour.getPrice())
                 .defaultTransport(tour.getDefaultTransport())
                 .tourStatus(tour.getTourStatus())
                 .availableTourLevels(tour.availableLevels())
@@ -104,7 +104,7 @@ public class TourService {
         }
 
         int totalPrice = calculateTotalPrice(tour, request);
-        int basePrice = tour.getBasePrice() * guestCount;
+        int basePrice = tour.getPrice() * guestCount;
 
         int discountRate = customerRepository.findById(customerId)
                 .map(Customer::currentDiscountRate)
@@ -122,7 +122,7 @@ public class TourService {
     // 할인 전 총 금액 = (1인 기본가 + 호텔 + 식사 + 교통) × 인원 + 음료
     // 음료 수량은 예약 전체 기준 개수라서 인원수를 곱하지 않는다.
     private int calculateTotalPrice(Tour tour, QuoteRequest request) {
-        int perGuestPrice = tour.getBasePrice()
+        int perGuestPrice = tour.getPrice()
                 + request.getHotelGrade().getPrice()
                 + request.getMealType().getPrice()
                 + request.getTransport().getPrice();
@@ -138,7 +138,7 @@ public class TourService {
         Map<Long, DrinkOption> found = drinkOptionRepository
                 .findAllById(drinkOptions.stream().map(QuoteRequest.DrinkOptionItem::getOptionId).toList())
                 .stream()
-                .collect(Collectors.toMap(DrinkOption::getId, Function.identity()));
+                .collect(Collectors.toMap(DrinkOption::getOptionId, Function.identity()));
 
         int total = 0;
         for (QuoteRequest.DrinkOptionItem item : drinkOptions) {
@@ -161,12 +161,12 @@ public class TourService {
 
     private TourSummaryResponse toSummary(Tour tour) {
         return TourSummaryResponse.builder()
-                .tourId(tour.getId())
+                .tourId(tour.getTourId())
                 .theme(tour.getTheme())
                 .tourName(tour.getTourName())
                 .startDate(tour.getStartDate())
                 .endDate(tour.getEndDate())
-                .basePrice(tour.getBasePrice())
+                .basePrice(tour.getPrice())
                 .tourStatus(tour.getTourStatus())
                 .build();
     }

@@ -49,7 +49,7 @@ class CustomerTourControllerTest {
     void 토큰이_없으면_401이다() throws Exception {
         mockMvc.perform(get(BASE_URL)).andExpect(status().isUnauthorized());
         mockMvc.perform(get(BASE_URL + "/search")).andExpect(status().isUnauthorized());
-        mockMvc.perform(get(BASE_URL + "/" + golfTour.getId())).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(BASE_URL + "/" + golfTour.getTourId())).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -106,9 +106,9 @@ class CustomerTourControllerTest {
 
     @Test
     void 상세를_조회한다() throws Exception {
-        mockMvc.perform(get(BASE_URL + "/" + golfTour.getId()).header("Authorization", bearer(Role.CUSTOMER)))
+        mockMvc.perform(get(BASE_URL + "/" + golfTour.getTourId()).header("Authorization", bearer(Role.CUSTOMER)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.tourId").value(golfTour.getId()))
+                .andExpect(jsonPath("$.tourId").value(golfTour.getTourId()))
                 .andExpect(jsonPath("$.defaultTransport").value("PREMIUM_VAN_10"))
                 .andExpect(jsonPath("$.availableTourLevels.length()").value(3));
     }
@@ -122,7 +122,7 @@ class CustomerTourControllerTest {
 
     private String bearer(Role role) {
         Member member = Member.create("tester", "pw", "테스터", "010-0000-0000", "서울", role);
-        ReflectionTestUtils.setField(member, "id", 1L);
-        return "Bearer " + jwtTokenProvider.createToken(member.getId(), member.getRole());
+        ReflectionTestUtils.setField(member, "memberId", 1L);
+        return "Bearer " + jwtTokenProvider.createToken(member.getMemberId(), member.getRole());
     }
 }
