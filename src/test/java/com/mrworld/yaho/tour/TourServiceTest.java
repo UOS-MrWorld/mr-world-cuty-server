@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -35,6 +36,9 @@ class TourServiceTest {
     @Mock
     private TourRepository tourRepository;
 
+    @Mock
+    private DrinkOptionRepository drinkOptionRepository;
+
     @InjectMocks
     private TourService tourService;
 
@@ -43,6 +47,21 @@ class TourServiceTest {
         when(tourRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> tourService.getTourDetail(99L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void 상세_조회는_선택_가능한_음료_옵션을_포함한다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(tour(Theme.GOLF)));
+        DrinkOption coffee = DrinkOption.create("COFFEE", 5_000);
+        ReflectionTestUtils.setField(coffee, "optionId", 3L);
+        when(drinkOptionRepository.findAll(any(Sort.class))).thenReturn(List.of(coffee));
+
+        TourDetailResponse response = tourService.getTourDetail(1L);
+
+        assertThat(response.getDrinkOptions()).hasSize(1);
+        assertThat(response.getDrinkOptions().get(0).getOptionId()).isEqualTo(3L);
+        assertThat(response.getDrinkOptions().get(0).getDrinkName()).isEqualTo("COFFEE");
+        assertThat(response.getDrinkOptions().get(0).getDrinkPrice()).isEqualTo(5_000);
     }
 
     @Test
