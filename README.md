@@ -55,13 +55,11 @@ API 경로는 권한별로 나뉜다. 인증 없이 쓰는 `/api/v1/auth/**`, �
 | --- | --- | --- |
 | `auth` | `AuthController` | `/api/v1/auth/**` (signup, login, refresh, logout) |
 | `member` | `MemberController` | `/api/v1/members/me` (조회, 수정) |
-| `tour` | `TourController` | `/api/v1/customer/tours/**` (목록, 상세, `voice-search`) |
-| `tour` | `StaffTourController` | `/api/v1/staff/tours/**` (등록, 수정, 현황 목록·상세) |
-| `booking` | `BookingController` | `/api/v1/customer/tours/{tourId}/quote`, `/api/v1/customer/bookings/**` (신청, 수정, 목록, 상세, `cancel`), `/api/v1/customer/travel-history` |
+| `tour` | `TourController` | `/api/v1/customer/tours/**` (목록, 검색, 상세, `quote`, `voice-search`), `/api/v1/staff/tours/**` (등록, 수정, 현황 목록·상세) |
+| `booking` | `BookingController` | `/api/v1/customer/bookings/**` (신청, 수정, 목록, 상세, `cancel`), `/api/v1/customer/travel-history` |
 | `payment` | `PaymentController` | `/api/v1/customer/payments` |
 | `inventory` | `InventoryController` | `/api/v1/staff/inventory/**` (등록, 조회, 수정) |
-| `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-discount`, `loyalty-discount/by-grade`) |
-| `customer` | `LoyaltyPolicyController` | `/api/v1/staff/loyalty-policy` |
+| `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-discount`, `loyalty-discount/by-grade`), `/api/v1/staff/loyalty-policy` |
 
 같은 패키지 안에 고객용/직원용 컨트롤러가 같이 있는 경우(`tour`, `customer`)는 데이터(엔티티)를 공유하되 권한 체계가 달라서 클래스만 분리해뒀다.
 
