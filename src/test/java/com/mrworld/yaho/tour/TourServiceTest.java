@@ -1,9 +1,14 @@
 package com.mrworld.yaho.tour;
 
+import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
+import com.mrworld.yaho.customer.Customer;
+import com.mrworld.yaho.customer.CustomerRepository;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
+import com.mrworld.yaho.tour.dto.QuoteRequest;
+import com.mrworld.yaho.tour.dto.QuoteResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +36,12 @@ class TourServiceTest {
 
     @Mock
     private TourRepository tourRepository;
+
+    @Mock
+    private DrinkOptionRepository drinkOptionRepository;
+
+    @Mock
+    private CustomerRepository customerRepository;
 
     @InjectMocks
     private TourService tourService;
@@ -77,10 +88,183 @@ class TourServiceTest {
         verify(tourRepository).search(any(), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
     }
 
+    @Test
+    void 가격_계산은_기본가와_옵션_추가금을_인원만큼_곱해_합산한다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.GOLF)));
+        when(customerRepository.findById(7L)).thenReturn(Optional.empty());
+
+        QuoteRequest request = quoteRequest(Tour.TourLevel.GRAND, 2, Tour.Transport.PREMIUM_VAN_10);
+        request.setHotelGrade(Tour.HotelGrade.FOUR_STAR);
+        request.setMealType(Tour.MealType.LOCAL_RESTAURANT);
+
+        QuoteResponse response = tourService.getQuote(1L, 7L, request);
+
+        // 옵션 1인 추가금 = 호텔 100,000 + 식사 50,000 + 교통 50,000
+        assertThat(response.getBasePrice()).isEqualTo(1_000_000);
+        assertThat(response.getOptionPrice()).isEqualTo(400_000);
+        assertThat(response.getTotalPrice()).isEqualTo(1_400_000);
+        assertThat(response.getDiscountRate()).isZero();
+        assertThat(response.getExpectedPaymentAmount()).isEqualTo(1_400_000);
+    }
+
+    @Test
+    void 음료는_수량만큼만_더하고_인원수는_곱하지_않는다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.GOLF)));
+        when(customerRepository.findById(7L)).thenReturn(Optional.empty());
+        when(drinkOptionRepository.findAllById(List.of(3L))).thenReturn(List.of(drinkOption(3L, 5_000)));
+
+        QuoteRequest request = quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10);
+        request.setDrinkOptions(List.of(drinkItem(3L, 4)));
+
+        QuoteResponse response = tourService.getQuote(1L, 7L, request);
+
+        // 옵션 = (0 + 0 + 50,000) * 2 + 5,000 * 4
+        assertThat(response.getOptionPrice()).isEqualTo(120_000);
+    }
+
+    @Test
+    void 할인이_적용된_고객은_등급_할인율로_예상_결제_금액을_계산한다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.GOLF)));
+        Customer customer = Customer.create(7L);
+        ReflectionTestUtils.setField(customer, "loyaltyGrade", Customer.LoyaltyGrade.VIP);
+        ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
+        when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
+
+        QuoteResponse response = tourService.getQuote(
+                1L, 7L, quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10));
+
+        assertThat(response.getTotalPrice()).isEqualTo(1_100_000);
+        assertThat(response.getDiscountRate()).isEqualTo(10);
+        assertThat(response.getExpectedPaymentAmount()).isEqualTo(990_000);
+    }
+
+    @Test
+    void 할인이_적용되지_않은_고객은_할인율이_0이다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.GOLF)));
+        Customer customer = Customer.create(7L);
+        ReflectionTestUtils.setField(customer, "loyaltyGrade", Customer.LoyaltyGrade.VIP);
+        when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
+
+        QuoteResponse response = tourService.getQuote(
+                1L, 7L, quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10));
+
+        assertThat(response.getDiscountRate()).isZero();
+    }
+
+    @Test
+    void 가격_계산_대상_투어가_없으면_예외가_발생한다() {
+        when(tourRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tourService.getQuote(
+                99L, 7L, quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10)))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void 모집_중이_아닌_투어는_가격_계산할_수_없다() {
+        Tour tour = openTour(Tour.Theme.GOLF);
+        ReflectionTestUtils.setField(tour, "tourStatus", Tour.Status.CONFIRMED);
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(tour));
+
+        assertThatThrownBy(() -> tourService.getQuote(
+                1L, 7L, quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10)))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void 시작_7일_전_마감일은_예약_가능하고_이후는_마감이다() {
+        Tour lastDay = openTour(Tour.Theme.GOLF);
+        ReflectionTestUtils.setField(lastDay, "startDate", LocalDate.now().plusDays(7));
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(lastDay));
+        when(customerRepository.findById(7L)).thenReturn(Optional.empty());
+
+        QuoteRequest request = quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10);
+        assertThat(tourService.getQuote(1L, 7L, request).getTotalPrice()).isPositive();
+
+        Tour closed = openTour(Tour.Theme.GOLF);
+        ReflectionTestUtils.setField(closed, "startDate", LocalDate.now().plusDays(6));
+        when(tourRepository.findById(2L)).thenReturn(Optional.of(closed));
+
+        assertThatThrownBy(() -> tourService.getQuote(2L, 7L, request))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void 허니문_힐링은_클래식_등급을_선택할_수_없다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.HEALING)));
+
+        assertThatThrownBy(() -> tourService.getQuote(
+                1L, 7L, quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void 허니문은_2명만_가능하다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.HONEYMOON)));
+
+        assertThatThrownBy(() -> tourService.getQuote(
+                1L, 7L, quoteRequest(Tour.TourLevel.GRAND, 4, Tour.Transport.PREMIUM_VAN_10)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void 세_명_이상은_2인_차량을_선택할_수_없다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.GOLF)));
+
+        assertThatThrownBy(() -> tourService.getQuote(
+                1L, 7L, quoteRequest(Tour.TourLevel.CLASSIC, 3, Tour.Transport.PREMIUM_CAR_2)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void 존재하지_않는_음료_옵션은_예외가_발생한다() {
+        when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Tour.Theme.GOLF)));
+        when(drinkOptionRepository.findAllById(List.of(99L))).thenReturn(List.of());
+
+        QuoteRequest request = quoteRequest(Tour.TourLevel.CLASSIC, 2, Tour.Transport.PREMIUM_VAN_10);
+        request.setDrinkOptions(List.of(drinkItem(99L, 1)));
+
+        assertThatThrownBy(() -> tourService.getQuote(1L, 7L, request))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     private Tour tour(Tour.Theme theme) {
         Tour tour = Tour.create(theme, "테스트 투어", null, LocalDate.parse("2026-10-20"),
                 LocalDate.parse("2026-10-23"), 500000, Tour.Transport.PREMIUM_VAN_10);
         ReflectionTestUtils.setField(tour, "id", 1L);
         return tour;
+    }
+
+    // 예약 마감 전(시작 30일 전)인 투어. 기본가는 1인 500,000원이다.
+    private Tour openTour(Tour.Theme theme) {
+        LocalDate startDate = LocalDate.now().plusDays(30);
+        Tour tour = Tour.create(theme, "테스트 투어", null, startDate, startDate.plusDays(3),
+                500000, Tour.Transport.PREMIUM_VAN_10);
+        ReflectionTestUtils.setField(tour, "id", 1L);
+        return tour;
+    }
+
+    // 호텔 3성(0원), 식사 도시락(0원)인 기본 요청
+    private QuoteRequest quoteRequest(Tour.TourLevel level, int guestCount, Tour.Transport transport) {
+        QuoteRequest request = new QuoteRequest();
+        request.setTourLevel(level);
+        request.setGuestCount(guestCount);
+        request.setHotelGrade(Tour.HotelGrade.THREE_STAR);
+        request.setMealType(Tour.MealType.LUNCH_BOX);
+        request.setTransport(transport);
+        return request;
+    }
+
+    private QuoteRequest.DrinkOptionItem drinkItem(Long optionId, int quantity) {
+        QuoteRequest.DrinkOptionItem item = new QuoteRequest.DrinkOptionItem();
+        item.setOptionId(optionId);
+        item.setQuantity(quantity);
+        return item;
+    }
+
+    private DrinkOption drinkOption(Long id, int price) {
+        DrinkOption drinkOption = DrinkOption.create("COFFEE", price);
+        ReflectionTestUtils.setField(drinkOption, "id", id);
+        return drinkOption;
     }
 }
