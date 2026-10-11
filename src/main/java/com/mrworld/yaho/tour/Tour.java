@@ -35,9 +35,52 @@ public class Tour {
         PREMIUM
     }
 
+    // 옵션 추가금은 1인 기준 금액이며, 팀에서 확정되기 전까지 임시 값이다.
+    public enum HotelGrade {
+        THREE_STAR(0),
+        FOUR_STAR(100_000),
+        FIVE_STAR(250_000);
+
+        private final int price;
+
+        HotelGrade(int price) {
+            this.price = price;
+        }
+
+        public int getPrice() {
+            return price;
+        }
+    }
+
+    public enum MealType {
+        LUNCH_BOX(0),
+        LOCAL_RESTAURANT(50_000),
+        FINE_DINING(150_000);
+
+        private final int price;
+
+        MealType(int price) {
+            this.price = price;
+        }
+
+        public int getPrice() {
+            return price;
+        }
+    }
+
     public enum Transport {
-        PREMIUM_CAR_2,
-        PREMIUM_VAN_10
+        PREMIUM_CAR_2(120_000),
+        PREMIUM_VAN_10(50_000);
+
+        private final int price;
+
+        Transport(int price) {
+            this.price = price;
+        }
+
+        public int getPrice() {
+            return price;
+        }
     }
 
     public enum Status {
