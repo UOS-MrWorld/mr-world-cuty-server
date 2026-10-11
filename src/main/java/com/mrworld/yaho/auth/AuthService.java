@@ -61,13 +61,13 @@ public class AuthService {
 
         // 역할별 정보는 member의 id를 그대로 식별자로 쓰며, 회원 저장과 같은 트랜잭션에서 함께 저장한다.
         if(savedMember.getRole() == Role.CUSTOMER) {
-            customerRepository.save(Customer.create(savedMember.getId()));
+            customerRepository.save(Customer.create(savedMember.getMemberId()));
         } else if(savedMember.getRole() == Role.STAFF) {
-            staffRepository.save(Staff.create(savedMember.getId()));
+            staffRepository.save(Staff.create(savedMember.getMemberId()));
         }
 
         return new SignUpResponse(
-                savedMember.getId(),
+                savedMember.getMemberId(),
                 savedMember.getName(),
                 savedMember.getLoginId(),
                 savedMember.getPhoneNum(),
@@ -91,16 +91,16 @@ public class AuthService {
     }
 
     private LoginResponse issueLoginToken(Member member) {
-        String accessToken = jwtTokenProvider.createToken(member.getId(), member.getRole());
-        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
+        String accessToken = jwtTokenProvider.createToken(member.getMemberId(), member.getRole());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getMemberId());
 
-        RefreshToken savedRefreshToken = refreshTokenRepository.findByMemberId(member.getId())
+        RefreshToken savedRefreshToken = refreshTokenRepository.findByMemberId(member.getMemberId())
                 .orElse(null);
 
         if(savedRefreshToken == null) {
             refreshTokenRepository.save(
                     RefreshToken.builder()
-                            .memberId(member.getId())
+                            .memberId(member.getMemberId())
                             .token(refreshToken)
                             .expiresAt(jwtTokenProvider.getExpiresAt(refreshToken))
                     .build()
@@ -113,7 +113,7 @@ public class AuthService {
         }
 
         return new LoginResponse(
-                member.getId(),
+                member.getMemberId(),
                 member.getName(),
                 member.getRole(),
                 accessToken,
@@ -129,7 +129,7 @@ public class AuthService {
         Member member = memberRepository.findById(savedToken.getMemberId())
                 .orElseThrow(() -> new AuthenticationFailedException(INVALID_REFRESH_TOKEN));
 
-        return new TokenResponse(jwtTokenProvider.createToken(member.getId(), member.getRole()));
+        return new TokenResponse(jwtTokenProvider.createToken(member.getMemberId(), member.getRole()));
     }
 
     @Transactional

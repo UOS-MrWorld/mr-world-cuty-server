@@ -17,7 +17,7 @@ public class DrinkOption {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long optionId;
 
     @Column(nullable = false)
     private String drinkName;

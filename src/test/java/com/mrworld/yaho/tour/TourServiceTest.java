@@ -238,7 +238,7 @@ class TourServiceTest {
     private Tour tour(Theme theme) {
         Tour tour = Tour.create(theme, "테스트 투어", null, LocalDate.parse("2026-10-20"),
                 LocalDate.parse("2026-10-23"), 500000, Transport.PREMIUM_VAN_10);
-        ReflectionTestUtils.setField(tour, "id", 1L);
+        ReflectionTestUtils.setField(tour, "tourId", 1L);
         return tour;
     }
 
@@ -247,7 +247,7 @@ class TourServiceTest {
         LocalDate startDate = LocalDate.now().plusDays(30);
         Tour tour = Tour.create(theme, "테스트 투어", null, startDate, startDate.plusDays(3),
                 500000, Transport.PREMIUM_VAN_10);
-        ReflectionTestUtils.setField(tour, "id", 1L);
+        ReflectionTestUtils.setField(tour, "tourId", 1L);
         return tour;
     }
 
@@ -271,7 +271,7 @@ class TourServiceTest {
 
     private DrinkOption drinkOption(Long id, int price) {
         DrinkOption drinkOption = DrinkOption.create("COFFEE", price);
-        ReflectionTestUtils.setField(drinkOption, "id", id);
+        ReflectionTestUtils.setField(drinkOption, "optionId", id);
         return drinkOption;
     }
 }

@@ -27,7 +27,7 @@ public class Tour {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long tourId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -44,8 +44,9 @@ public class Tour {
     @Column(nullable = false)
     private LocalDate endDate;
 
+    // 1인 기준 테마 기본 가격
     @Column(nullable = false)
-    private int basePrice;
+    private int price;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -65,7 +66,7 @@ public class Tour {
             String description,
             LocalDate startDate,
             LocalDate endDate,
-            int basePrice,
+            int price,
             Transport defaultTransport
     ) {
         return Tour.builder()
@@ -74,7 +75,7 @@ public class Tour {
                 .description(description)
                 .startDate(startDate)
                 .endDate(endDate)
-                .basePrice(basePrice)
+                .price(price)
                 .defaultTransport(defaultTransport)
                 .tourStatus(TourStatus.RECRUITING)
                 .build();
