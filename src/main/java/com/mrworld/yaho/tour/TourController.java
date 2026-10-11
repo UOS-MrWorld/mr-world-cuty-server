@@ -9,6 +9,8 @@ import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
+import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
+import com.mrworld.yaho.tour.dto.VoiceSearchResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -29,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// 여행 상품 API. 고객용(getTours, searchTours, getTourDetail, getQuote)을 제공하며,
+// 여행 상품 API. 고객용(getTours, searchTours, voiceSearch, getTourDetail, getQuote)을 제공하며,
 // 직원용(getStaffTours, getTourStatus, createTour, updateTour)은 /api/v1/staff/tours 아래에 추가한다.
 @RestController
 @RequestMapping("/api/v1")
@@ -125,6 +127,36 @@ public class TourController {
     })
     public ResponseEntity<TourDetailResponse> getTourDetail(@PathVariable Long tourId) {
         return ResponseEntity.ok(tourService.getTourDetail(tourId));
+    }
+
+    @PostMapping("/customer/tours/voice-search")
+    @Operation(summary = "음성 기반 여행 상품 검색",
+            description = "클라이언트가 STT로 변환한 문장과 인식된 최대 가격/출발 날짜 조건으로 여행 상품을 검색합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "검색 성공", useReturnTypeSchema = true),
+            @ApiResponse(responseCode = "400", description = "검색 문장 또는 검색 조건 오류",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
+                    )),
+            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
+                    )),
+            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
+                    )),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
+                    ))
+    })
+    public ResponseEntity<VoiceSearchResponse> voiceSearch(@RequestBody @Valid VoiceSearchRequest request) {
+        return ResponseEntity.ok(tourService.voiceSearch(request));
     }
 
     @PostMapping("/customer/tours/{tourId}/quote")
