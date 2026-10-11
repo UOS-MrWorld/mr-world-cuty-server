@@ -1,7 +1,8 @@
 package com.mrworld.yaho.security;
 
-import com.mrworld.yaho.member.Member;
+import com.mrworld.yaho.common.enums.Role;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -20,7 +21,7 @@ import java.time.ZoneId;
 import java.util.Date;
 
 @Component
-public class JwtProvider {
+public class JwtTokenProvider {
     private SecretKey key;
 
     @Value("${jwt.secret}")
@@ -38,25 +39,30 @@ public class JwtProvider {
         key = Keys.hmacShaKeyFor(secretKeyBytes);
     }
 
-    public String generateAccessToken(Member member) {
-        return generateToken(member, "access", accessExpirationTime);
+    // 접근 토큰: 회원 ID와 역할(CUSTOMER/STAFF)을 담는다.
+    public String createToken(Long memberId, Role role) {
+        return buildToken(memberId, role, "access", accessExpirationTime);
     }
 
-    public String generateRefreshToken(Member member) {
-        return generateToken(member, "refresh", refreshAccessExpirationTime);
+    // 재발급용 토큰: 접근 토큰 발급에만 쓰이므로 역할은 담지 않는다.
+    public String createRefreshToken(Long memberId) {
+        return buildToken(memberId, null, "refresh", refreshAccessExpirationTime);
     }
 
-    private String generateToken(Member member, String type, long expirationTime) {
+    private String buildToken(Long memberId, Role role, String type, long expirationTime) {
         Date now = new Date();
 
-        return Jwts.builder()
-                .subject(String.valueOf(member.getId()))
-                .claim("role", member.getRole().name())
+        JwtBuilder builder = Jwts.builder()
+                .subject(String.valueOf(memberId))
                 .claim("type", type)
                 .issuedAt(now)
-                .expiration(new Date(now.getTime() + expirationTime))
-                .signWith(key)
-                .compact();
+                .expiration(new Date(now.getTime() + expirationTime));
+
+        if (role != null) {
+            builder.claim("role", role.name());
+        }
+
+        return builder.signWith(key).compact();
     }
 
     public boolean validateToken(String token) {

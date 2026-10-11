@@ -10,7 +10,7 @@ import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.member.Staff;
 import com.mrworld.yaho.member.StaffRepository;
-import com.mrworld.yaho.security.JwtProvider;
+import com.mrworld.yaho.security.JwtTokenProvider;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,7 +28,7 @@ public class AuthService {
     private final CustomerRepository customerRepository;
     private final StaffRepository staffRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtProvider jwtProvider;
+    private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -91,8 +91,8 @@ public class AuthService {
     }
 
     private LoginResponse issueLoginToken(Member member) {
-        String accessToken = jwtProvider.generateAccessToken(member);
-        String refreshToken = jwtProvider.generateRefreshToken(member);
+        String accessToken = jwtTokenProvider.createToken(member.getId(), member.getRole());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
 
         RefreshToken savedRefreshToken = refreshTokenRepository.findByMemberId(member.getId())
                 .orElse(null);
@@ -102,13 +102,13 @@ public class AuthService {
                     RefreshToken.builder()
                             .memberId(member.getId())
                             .token(refreshToken)
-                            .expiresAt(jwtProvider.getExpiresAt(refreshToken))
+                            .expiresAt(jwtTokenProvider.getExpiresAt(refreshToken))
                     .build()
             );
         } else {
             savedRefreshToken.updateToken(
                     refreshToken,
-                    jwtProvider.getExpiresAt(refreshToken)
+                    jwtTokenProvider.getExpiresAt(refreshToken)
             );
         }
 
@@ -129,7 +129,7 @@ public class AuthService {
         Member member = memberRepository.findById(savedToken.getMemberId())
                 .orElseThrow(() -> new AuthenticationFailedException(INVALID_REFRESH_TOKEN));
 
-        return new TokenResponse(jwtProvider.generateAccessToken(member));
+        return new TokenResponse(jwtTokenProvider.createToken(member.getId(), member.getRole()));
     }
 
     @Transactional
@@ -144,8 +144,8 @@ public class AuthService {
     }
 
     private RefreshToken findValidRefreshToken(String refreshToken) {
-        if(!jwtProvider.validateToken(refreshToken)
-                || !"refresh".equals(jwtProvider.getTokenType(refreshToken))) {
+        if(!jwtTokenProvider.validateToken(refreshToken)
+                || !"refresh".equals(jwtTokenProvider.getTokenType(refreshToken))) {
             throw new AuthenticationFailedException(INVALID_REFRESH_TOKEN);
         }
 

@@ -8,7 +8,7 @@ import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
 import com.mrworld.yaho.member.Member;
-import com.mrworld.yaho.security.JwtProvider;
+import com.mrworld.yaho.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +43,7 @@ class CustomerTourQuoteControllerTest {
     private DrinkOptionRepository drinkOptionRepository;
 
     @Autowired
-    private JwtProvider jwtProvider;
+    private JwtTokenProvider jwtTokenProvider;
 
     private Tour golfTour;
     private DrinkOption coffee;
@@ -200,6 +200,6 @@ class CustomerTourQuoteControllerTest {
     private String bearer(Role role) {
         Member member = Member.create("tester", "pw", "테스터", "010-0000-0000", "서울", role);
         ReflectionTestUtils.setField(member, "id", MEMBER_ID);
-        return "Bearer " + jwtProvider.generateAccessToken(member);
+        return "Bearer " + jwtTokenProvider.createToken(member.getId(), member.getRole());
     }
 }
