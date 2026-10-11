@@ -1,5 +1,6 @@
 package com.mrworld.yaho.auth;
 
+import com.mrworld.yaho.common.enums.LoyaltyGrade;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
 import com.mrworld.yaho.member.StaffRepository;
@@ -37,7 +38,7 @@ class AuthSignupRoleRowTest {
         long memberId = signup("CUSTOMER");
 
         Customer customer = customerRepository.findById(memberId).orElseThrow();
-        assertThat(customer.getLoyaltyGrade()).isEqualTo(Customer.LoyaltyGrade.NORMAL);
+        assertThat(customer.getLoyaltyGrade()).isEqualTo(LoyaltyGrade.NORMAL);
         assertThat(customer.isLoyaltyDiscountApplied()).isFalse();
         assertThat(customer.currentDiscountRate()).isZero();
         assertThat(staffRepository.existsById(memberId)).isFalse();

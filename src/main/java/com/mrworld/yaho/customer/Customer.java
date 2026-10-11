@@ -1,5 +1,6 @@
 package com.mrworld.yaho.customer;
 
+import com.mrworld.yaho.common.enums.LoyaltyGrade;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,28 +16,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class Customer {
-
-    // 등급 기준 횟수와 할인율은 직원이 수정할 수 없는 고정값이며, 팀 확정 전까지 임시 값이다.
-    public enum LoyaltyGrade {
-        NORMAL(0, 0),
-        VIP(5, 10);
-
-        private final int requiredTourCount;
-        private final int discountRate;
-
-        LoyaltyGrade(int requiredTourCount, int discountRate) {
-            this.requiredTourCount = requiredTourCount;
-            this.discountRate = discountRate;
-        }
-
-        public int getRequiredTourCount() {
-            return requiredTourCount;
-        }
-
-        public int getDiscountRate() {
-            return discountRate;
-        }
-    }
 
     // Member의 id를 그대로 식별자로 사용한다.
     @Id

@@ -1,5 +1,7 @@
 package com.mrworld.yaho.tour;
 
+import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.enums.TourStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,7 +13,7 @@ import java.util.Collection;
 
 public interface TourRepository extends JpaRepository<Tour, Long> {
 
-    Page<Tour> findByTourStatusIn(Collection<Tour.Status> statuses, Pageable pageable);
+    Page<Tour> findByTourStatusIn(Collection<TourStatus> statuses, Pageable pageable);
 
     // 조건이 null이면 해당 조건은 무시하고, 여러 조건은 AND로 검색한다.
     @Query("""
@@ -25,9 +27,9 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
               and (:departureDate is null or t.startDate = :departureDate)
             """)
     Page<Tour> search(
-            @Param("statuses") Collection<Tour.Status> statuses,
+            @Param("statuses") Collection<TourStatus> statuses,
             @Param("keyword") String keyword,
-            @Param("theme") Tour.Theme theme,
+            @Param("theme") Theme theme,
             @Param("maxPrice") Integer maxPrice,
             @Param("departureDate") LocalDate departureDate,
             Pageable pageable
