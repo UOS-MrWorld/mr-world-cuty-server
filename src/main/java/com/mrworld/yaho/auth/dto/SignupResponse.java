@@ -6,7 +6,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class SignUpResponse {
+public class SignupResponse {
     private long memberId;
     private String name;
     private String loginId;

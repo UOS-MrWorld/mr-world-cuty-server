@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class CustomerTourControllerTest {
+class TourControllerTest {
 
     private static final String BASE_URL = "/api/v1/customer/tours";
 
