@@ -29,15 +29,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+// 여행 상품 API. 고객용(getTours, searchTours, getTourDetail, getQuote)을 제공하며,
+// 직원용(getStaffTours, getTourStatus, createTour, updateTour)은 /api/v1/staff/tours 아래에 추가한다.
 @RestController
-@RequestMapping("/api/v1/customer/tours")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
-@Tag(name = "Tour", description = "고객용 여행 상품 조회/검색 API")
-public class CustomerTourController {
+@Tag(name = "Tour", description = "여행 상품 조회/검색/가격 계산 API")
+public class TourController {
     private final TourService tourService;
     private final BookingService bookingService;
 
-    @GetMapping
+    @GetMapping("/customer/tours")
     @Operation(summary = "여행 상품 목록 조회", description = "고객이 조회 가능한 여행 상품 목록을 페이지 단위로 조회합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
@@ -66,7 +68,7 @@ public class CustomerTourController {
         return ResponseEntity.ok(tourService.getTours(request));
     }
 
-    @GetMapping("/search")
+    @GetMapping("/customer/tours/search")
     @Operation(summary = "여행 상품 검색",
             description = "키워드·테마·최대 가격·출발 날짜 조건으로 검색합니다. 조건은 모두 선택값이며 AND로 적용됩니다.")
     @ApiResponses({
@@ -96,7 +98,7 @@ public class CustomerTourController {
         return ResponseEntity.ok(tourService.searchTours(request));
     }
 
-    @GetMapping("/{tourId}")
+    @GetMapping("/customer/tours/{tourId}")
     @Operation(summary = "여행 상품 상세 조회", description = "투어 정보와 선택 가능한 투어 등급을 반환합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
@@ -121,11 +123,11 @@ public class CustomerTourController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<TourDetailResponse> getTourDetails(@PathVariable Long tourId) {
-        return ResponseEntity.ok(tourService.getTourDetails(tourId));
+    public ResponseEntity<TourDetailResponse> getTourDetail(@PathVariable Long tourId) {
+        return ResponseEntity.ok(tourService.getTourDetail(tourId));
     }
 
-    @PostMapping("/{tourId}/quote")
+    @PostMapping("/customer/tours/{tourId}/quote")
     @Operation(summary = "여행 옵션 가격 계산",
             description = "선택한 옵션 기준 예상 가격과 단골 할인 적용 금액을 계산합니다. 예약은 생성하지 않습니다.")
     @ApiResponses({

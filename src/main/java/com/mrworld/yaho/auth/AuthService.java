@@ -32,7 +32,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public SignUpResponse signup(SignUpRequest request) {
+    public SignupResponse signup(SignupRequest request) {
         if(!request.getPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
@@ -66,7 +66,7 @@ public class AuthService {
             staffRepository.save(Staff.create(savedMember.getMemberId()));
         }
 
-        return new SignUpResponse(
+        return new SignupResponse(
                 savedMember.getMemberId(),
                 savedMember.getName(),
                 savedMember.getLoginId(),
