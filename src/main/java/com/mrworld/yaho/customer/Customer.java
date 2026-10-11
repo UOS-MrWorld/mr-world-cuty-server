@@ -1,11 +1,16 @@
 package com.mrworld.yaho.customer;
 
 import com.mrworld.yaho.common.enums.LoyaltyGrade;
+import com.mrworld.yaho.member.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
+import jakarta.persistence.OneToOne;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -17,9 +22,14 @@ import java.time.LocalDateTime;
 @Builder
 public class Customer {
 
-    // Member의 id를 그대로 식별자로 사용한다.
+    // Member의 id를 그대로 식별자로 사용한다. (member.memberId를 참조하는 외래키)
     @Id
     private Long memberId;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @MapsId
+    @JoinColumn(name = "member_id")
+    private Member member;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -30,9 +40,9 @@ public class Customer {
 
     private LocalDateTime loyaltyDiscountAppliedAt;
 
-    public static Customer create(Long memberId) {
+    public static Customer create(Member member) {
         return Customer.builder()
-                .memberId(memberId)
+                .member(member)
                 .loyaltyGrade(LoyaltyGrade.NORMAL)
                 .loyaltyDiscountApplied(false)
                 .build();
