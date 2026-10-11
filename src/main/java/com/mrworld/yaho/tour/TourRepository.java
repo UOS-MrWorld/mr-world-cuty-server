@@ -10,10 +10,14 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 
 public interface TourRepository extends JpaRepository<Tour, Long> {
 
     Page<Tour> findByTourStatusIn(Collection<TourStatus> statuses, Pageable pageable);
+
+    // 마감 대상 투어(해당 상태이면서 시작일이 마감 기준일인 투어)를 조회한다.
+    List<Tour> findAllByTourStatusAndStartDate(TourStatus status, LocalDate startDate);
 
     // 조건이 null이면 해당 조건은 무시하고, 여러 조건은 AND로 검색한다.
     @Query("""
