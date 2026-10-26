@@ -108,7 +108,11 @@ public class TourService {
         List<Theme> themes = detectThemes(queryText);
         // 테마가 없으면 조건(가격·날짜)만으로 후보를 모은 뒤 문장과 비교한다.
         List<Theme> searchThemes = themes.isEmpty() ? Collections.singletonList(null) : themes;
-        Pageable pageable = PageRequest.of(0, VOICE_SEARCH_LIMIT, Sort.by("startDate", "tourId"));
+        // 문장 비교는 조회 후에 하므로, 테마가 없을 때는 후보를 자르지 않고 모두 가져온 뒤 마지막에 개수를 제한한다.
+        Sort sort = Sort.by("startDate", "tourId");
+        Pageable pageable = themes.isEmpty()
+                ? Pageable.unpaged(sort)
+                : PageRequest.of(0, VOICE_SEARCH_LIMIT, sort);
 
         Map<Long, Tour> found = new LinkedHashMap<>();
         for (Theme theme : searchThemes) {
