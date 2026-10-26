@@ -46,8 +46,8 @@ public class AuthController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<SignUpResponse> signup(@RequestBody @Valid SignUpRequest request) {
-        SignUpResponse response = authService.signup(request);
+    public ResponseEntity<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
+        SignupResponse response = authService.signup(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

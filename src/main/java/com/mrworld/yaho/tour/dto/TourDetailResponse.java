@@ -1,6 +1,9 @@
 package com.mrworld.yaho.tour.dto;
 
-import com.mrworld.yaho.tour.Tour;
+import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.enums.TourLevel;
+import com.mrworld.yaho.common.enums.TourStatus;
+import com.mrworld.yaho.common.enums.Transport;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -11,13 +14,14 @@ import java.util.List;
 @Builder
 public class TourDetailResponse {
     private long tourId;
-    private Tour.Theme theme;
+    private Theme theme;
     private String tourName;
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;
     private int basePrice;
-    private Tour.Transport defaultTransport;
-    private Tour.Status tourStatus;
-    private List<Tour.TourLevel> availableTourLevels;
+    private Transport defaultTransport;
+    private TourStatus tourStatus;
+    private List<TourLevel> availableTourLevels;
+    private List<DrinkOptionResponse> drinkOptions;
 }

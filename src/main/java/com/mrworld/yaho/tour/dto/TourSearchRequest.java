@@ -1,6 +1,6 @@
 package com.mrworld.yaho.tour.dto;
 
-import com.mrworld.yaho.tour.Tour;
+import com.mrworld.yaho.common.enums.Theme;
 import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,7 +14,7 @@ import java.time.LocalDate;
 public class TourSearchRequest extends TourListRequest {
     private String keyword;
 
-    private Tour.Theme theme;
+    private Theme theme;
 
     @Min(value = 0, message = "최대 가격은 0 이상이어야 합니다.")
     private Integer maxPrice;

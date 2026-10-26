@@ -47,7 +47,7 @@ com.mrworld.yaho/
 └── customer/   # 직원용 고객 관리, 단골 등급 정책·할인 적용
 ```
 
-각 도메인 패키지는 `Controller`(엔드포인트)와 `Service`(비즈니스 로직) 두 클래스만 있는 상태다. `Repository`/엔티티는 데이터 모델이 정해지는 대로 같은 패키지 안에 추가하면 된다.
+각 도메인 패키지는 `Controller`(엔드포인트)와 `Service`(비즈니스 로직)를 두고, 구현된 기능의 `Repository`/엔티티/DTO를 같은 패키지 안에 함께 둔다. 공용 enum(`Role`, `TourStatus` 등)은 `common/enums`에 있다. 아직 구현되지 않은 도메인은 `Controller`/`Service` 뼈대만 있는 상태다.
 
 API 경로는 권한별로 나뉜다. 인증 없이 쓰는 `/api/v1/auth/**`, 로그인한 본인 정보용 `/api/v1/members/me`, 고객용 `/api/v1/customer/**`, 직원용 `/api/v1/staff/**`이다. 직원용 경로 보호는 컨트롤러 분리가 아니라 `SecurityConfig`에서 권한을 걸어서 한다.
 
@@ -55,15 +55,13 @@ API 경로는 권한별로 나뉜다. 인증 없이 쓰는 `/api/v1/auth/**`, �
 | --- | --- | --- |
 | `auth` | `AuthController` | `/api/v1/auth/**` (signup, login, refresh, logout) |
 | `member` | `MemberController` | `/api/v1/members/me` (조회, 수정) |
-| `tour` | `TourController` | `/api/v1/customer/tours/**` (목록, 상세, `voice-search`) |
-| `tour` | `StaffTourController` | `/api/v1/staff/tours/**` (등록, 수정, 현황 목록·상세) |
-| `booking` | `BookingController` | `/api/v1/customer/tours/{tourId}/quote`, `/api/v1/customer/bookings/**` (신청, 수정, 목록, 상세, `cancel`), `/api/v1/customer/travel-history` |
+| `tour` | `TourController` | `/api/v1/customer/tours/**` (목록, 검색, 상세, `quote`, `voice-search`), `/api/v1/staff/tours/**` (등록, 수정, 현황 목록·상세) |
+| `booking` | `BookingController` | `/api/v1/customer/bookings/**` (신청, 수정, 목록, 상세, `cancel`), `/api/v1/customer/travel-history` |
 | `payment` | `PaymentController` | `/api/v1/customer/payments` |
 | `inventory` | `InventoryController` | `/api/v1/staff/inventory/**` (등록, 조회, 수정) |
-| `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-discount`, `loyalty-discount/by-grade`) |
-| `customer` | `LoyaltyPolicyController` | `/api/v1/staff/loyalty-policy` |
+| `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-discount`, `loyalty-discount/by-grade`), `/api/v1/staff/loyalty-policy` |
 
-같은 패키지 안에 고객용/직원용 컨트롤러가 같이 있는 경우(`tour`, `customer`)는 데이터(엔티티)를 공유하되 권한 체계가 달라서 클래스만 분리해뒀다.
+`tour`, `customer` 패키지는 고객용/직원용 API를 컨트롤러 하나가 함께 제공하며(설계 산출물의 `TourController`, `CustomerController`와 동일), 고객용/직원용 구분은 경로(`/customer/**`, `/staff/**`)와 `SecurityConfig`의 권한 설정으로 한다.
 
 ### 서버 내부 비즈니스 로직 (별도 API 없음)
 

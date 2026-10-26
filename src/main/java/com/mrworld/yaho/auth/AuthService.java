@@ -1,6 +1,7 @@
 package com.mrworld.yaho.auth;
 
 import com.mrworld.yaho.auth.dto.*;
+import com.mrworld.yaho.common.enums.Role;
 import com.mrworld.yaho.common.exception.AuthenticationFailedException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.customer.Customer;
@@ -9,7 +10,7 @@ import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.member.Staff;
 import com.mrworld.yaho.member.StaffRepository;
-import com.mrworld.yaho.security.JwtProvider;
+import com.mrworld.yaho.security.JwtTokenProvider;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,11 +28,11 @@ public class AuthService {
     private final CustomerRepository customerRepository;
     private final StaffRepository staffRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtProvider jwtProvider;
+    private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public SignUpResponse signup(SignUpRequest request) {
+    public SignupResponse signup(SignupRequest request) {
         if(!request.getPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
@@ -59,14 +60,14 @@ public class AuthService {
         }
 
         // 역할별 정보는 member의 id를 그대로 식별자로 쓰며, 회원 저장과 같은 트랜잭션에서 함께 저장한다.
-        if(savedMember.getRole() == Member.Role.CUSTOMER) {
-            customerRepository.save(Customer.create(savedMember.getId()));
-        } else if(savedMember.getRole() == Member.Role.STAFF) {
-            staffRepository.save(Staff.create(savedMember.getId()));
+        if(savedMember.getRole() == Role.CUSTOMER) {
+            customerRepository.save(Customer.create(savedMember));
+        } else if(savedMember.getRole() == Role.STAFF) {
+            staffRepository.save(Staff.create(savedMember));
         }
 
-        return new SignUpResponse(
-                savedMember.getId(),
+        return new SignupResponse(
+                savedMember.getMemberId(),
                 savedMember.getName(),
                 savedMember.getLoginId(),
                 savedMember.getPhoneNum(),
@@ -90,29 +91,29 @@ public class AuthService {
     }
 
     private LoginResponse issueLoginToken(Member member) {
-        String accessToken = jwtProvider.generateAccessToken(member);
-        String refreshToken = jwtProvider.generateRefreshToken(member);
+        String accessToken = jwtTokenProvider.createToken(member.getMemberId(), member.getRole());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getMemberId());
 
-        RefreshToken savedRefreshToken = refreshTokenRepository.findByMemberId(member.getId())
+        RefreshToken savedRefreshToken = refreshTokenRepository.findByMemberId(member.getMemberId())
                 .orElse(null);
 
         if(savedRefreshToken == null) {
             refreshTokenRepository.save(
                     RefreshToken.builder()
-                            .memberId(member.getId())
+                            .memberId(member.getMemberId())
                             .token(refreshToken)
-                            .expiresAt(jwtProvider.getExpiresAt(refreshToken))
+                            .expiresAt(jwtTokenProvider.getExpiresAt(refreshToken))
                     .build()
             );
         } else {
             savedRefreshToken.updateToken(
                     refreshToken,
-                    jwtProvider.getExpiresAt(refreshToken)
+                    jwtTokenProvider.getExpiresAt(refreshToken)
             );
         }
 
         return new LoginResponse(
-                member.getId(),
+                member.getMemberId(),
                 member.getName(),
                 member.getRole(),
                 accessToken,
@@ -128,7 +129,7 @@ public class AuthService {
         Member member = memberRepository.findById(savedToken.getMemberId())
                 .orElseThrow(() -> new AuthenticationFailedException(INVALID_REFRESH_TOKEN));
 
-        return new TokenResponse(jwtProvider.generateAccessToken(member));
+        return new TokenResponse(jwtTokenProvider.createToken(member.getMemberId(), member.getRole()));
     }
 
     @Transactional
@@ -143,8 +144,8 @@ public class AuthService {
     }
 
     private RefreshToken findValidRefreshToken(String refreshToken) {
-        if(!jwtProvider.validateToken(refreshToken)
-                || !"refresh".equals(jwtProvider.getTokenType(refreshToken))) {
+        if(!jwtTokenProvider.validateToken(refreshToken)
+                || !"refresh".equals(jwtTokenProvider.getTokenType(refreshToken))) {
             throw new AuthenticationFailedException(INVALID_REFRESH_TOKEN);
         }
 

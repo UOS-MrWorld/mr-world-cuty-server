@@ -1,5 +1,9 @@
 package com.mrworld.yaho.tour;
 
+import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.enums.TourLevel;
+import com.mrworld.yaho.common.enums.TourStatus;
+import com.mrworld.yaho.common.enums.Transport;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -21,35 +25,9 @@ import java.util.List;
 @Builder
 public class Tour {
 
-    public enum Theme {
-        HONEYMOON,
-        HEALING,
-        GOLF,
-        TREKKING
-    }
-
-    // 투어 등급 (CLASSIC=3성급+도시락, GRAND=4성급+현지식, PREMIUM=5성급+파인다이닝)
-    public enum TourLevel {
-        CLASSIC,
-        GRAND,
-        PREMIUM
-    }
-
-    public enum Transport {
-        PREMIUM_CAR_2,
-        PREMIUM_VAN_10
-    }
-
-    public enum Status {
-        RECRUITING,
-        CONFIRMED,
-        COMPLETED,
-        CANCELLED
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long tourId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -66,8 +44,9 @@ public class Tour {
     @Column(nullable = false)
     private LocalDate endDate;
 
+    // 1인 기준 테마 기본 가격
     @Column(nullable = false)
-    private int basePrice;
+    private int price;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -75,7 +54,7 @@ public class Tour {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status tourStatus;
+    private TourStatus tourStatus;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -87,7 +66,7 @@ public class Tour {
             String description,
             LocalDate startDate,
             LocalDate endDate,
-            int basePrice,
+            int price,
             Transport defaultTransport
     ) {
         return Tour.builder()
@@ -96,9 +75,9 @@ public class Tour {
                 .description(description)
                 .startDate(startDate)
                 .endDate(endDate)
-                .basePrice(basePrice)
+                .price(price)
                 .defaultTransport(defaultTransport)
-                .tourStatus(Status.RECRUITING)
+                .tourStatus(TourStatus.RECRUITING)
                 .build();
     }
 

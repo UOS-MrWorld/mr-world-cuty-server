@@ -1,0 +1,198 @@
+package com.mrworld.yaho.tour;
+
+import com.mrworld.yaho.common.enums.Role;
+import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.member.Member;
+import com.mrworld.yaho.security.JwtTokenProvider;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDate;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class TourControllerTest {
+
+    private static final String BASE_URL = "/api/v1/customer/tours";
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private TourRepository tourRepository;
+
+    @Autowired
+    private DrinkOptionRepository drinkOptionRepository;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    private Tour golfTour;
+
+    @BeforeEach
+    void setUp() {
+        tourRepository.deleteAll();
+        drinkOptionRepository.deleteAll();
+        drinkOptionRepository.save(DrinkOption.create("COFFEE", 5000));
+        golfTour = tourRepository.save(Tour.create(Theme.GOLF, "골프 챌린지 투어", "유명 골프 리조트",
+                LocalDate.parse("2026-10-20"), LocalDate.parse("2026-10-23"), 500000, Transport.PREMIUM_VAN_10));
+        tourRepository.save(Tour.create(Theme.HEALING, "효도 힐링 투어", "제주 온천 휴양",
+                LocalDate.parse("2026-11-20"), LocalDate.parse("2026-11-23"), 450000, Transport.PREMIUM_CAR_2));
+    }
+
+    @Test
+    void 토큰이_없으면_401이다() throws Exception {
+        mockMvc.perform(get(BASE_URL)).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(BASE_URL + "/search")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(BASE_URL + "/" + golfTour.getTourId())).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 직원_토큰이면_403이다() throws Exception {
+        mockMvc.perform(get(BASE_URL).header("Authorization", bearer(Role.STAFF)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void 목록을_조회한다() throws Exception {
+        mockMvc.perform(get(BASE_URL).header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].tourName").value("골프 챌린지 투어"))
+                .andExpect(jsonPath("$.content[0].tourStatus").value("RECRUITING"));
+    }
+
+    @Test
+    void 잘못된_페이지_값은_400이다() throws Exception {
+        mockMvc.perform(get(BASE_URL).param("page", "-1").header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get(BASE_URL).param("size", "0").header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 검색은_search_경로로_동작하고_조건이_AND로_적용된다() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/search")
+                        .param("theme", "GOLF").param("maxPrice", "500000").param("departureDate", "2026-10-20")
+                        .header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].theme").value("GOLF"));
+
+        mockMvc.perform(get(BASE_URL + "/search")
+                        .param("theme", "GOLF").param("maxPrice", "100000")
+                        .header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void 잘못된_검색_조건은_400이다() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/search").param("maxPrice", "-1")
+                        .header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get(BASE_URL + "/search").param("theme", "UNKNOWN")
+                        .header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get(BASE_URL + "/search").param("departureDate", "20261020")
+                        .header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 상세를_조회한다() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/" + golfTour.getTourId()).header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tourId").value(golfTour.getTourId()))
+                .andExpect(jsonPath("$.defaultTransport").value("PREMIUM_VAN_10"))
+                .andExpect(jsonPath("$.availableTourLevels.length()").value(3))
+                .andExpect(jsonPath("$.drinkOptions.length()").value(1))
+                .andExpect(jsonPath("$.drinkOptions[0].drinkName").value("COFFEE"))
+                .andExpect(jsonPath("$.drinkOptions[0].drinkPrice").value(5000));
+    }
+
+    @Test
+    void 존재하지_않는_투어는_404이다() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/999999").header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404));
+    }
+
+    @Test
+    void 음성_검색은_문장의_테마로_상품을_찾는다() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.CUSTOMER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"queryText\": \"부모님이랑 갈 힐링 여행 찾아줘\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recognizedText").value("부모님이랑 갈 힐링 여행 찾아줘"))
+                .andExpect(jsonPath("$.tours.length()").value(1))
+                .andExpect(jsonPath("$.tours[0].theme").value("HEALING"))
+                .andExpect(jsonPath("$.tours[0].tourName").value("효도 힐링 투어"));
+    }
+
+    @Test
+    void 음성_검색은_가격과_날짜_조건을_함께_적용한다() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.CUSTOMER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"queryText\": \"골프 여행 찾아줘\", \"maxPrice\": 100000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tours.length()").value(0));
+
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.CUSTOMER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"queryText\": \"제주도 가고 싶어\", \"departureDate\": \"2026-11-20\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tours.length()").value(1))
+                .andExpect(jsonPath("$.tours[0].tourName").value("효도 힐링 투어"));
+    }
+
+    @Test
+    void 음성_검색의_잘못된_요청은_400이다() throws Exception {
+        for (String body : new String[]{
+                "{\"queryText\": \"   \"}",
+                "{}",
+                "{\"queryText\": \"골프\", \"maxPrice\": -1}",
+                "{\"queryText\": \"골프\", \"departureDate\": \"20261020\"}"
+        }) {
+            mockMvc.perform(post(BASE_URL + "/voice-search")
+                            .header("Authorization", bearer(Role.CUSTOMER))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(400));
+        }
+    }
+
+    @Test
+    void 음성_검색은_토큰이_없으면_401_직원이면_403이다() throws Exception {
+        String body = "{\"queryText\": \"힐링 여행\"}";
+
+        mockMvc.perform(post(BASE_URL + "/voice-search").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    private String bearer(Role role) {
+        Member member = Member.create("tester", "pw", "테스터", "010-0000-0000", "서울", role);
+        ReflectionTestUtils.setField(member, "memberId", 1L);
+        return "Bearer " + jwtTokenProvider.createToken(member.getMemberId(), member.getRole());
+    }
+}

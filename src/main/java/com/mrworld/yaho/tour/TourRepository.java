@@ -1,5 +1,7 @@
 package com.mrworld.yaho.tour;
 
+import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.enums.TourStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,10 +10,14 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 
 public interface TourRepository extends JpaRepository<Tour, Long> {
 
-    Page<Tour> findByTourStatusIn(Collection<Tour.Status> statuses, Pageable pageable);
+    Page<Tour> findByTourStatusIn(Collection<TourStatus> statuses, Pageable pageable);
+
+    // 마감 대상 투어(해당 상태이면서 시작일이 마감 기준일인 투어)를 조회한다.
+    List<Tour> findAllByTourStatusAndStartDate(TourStatus status, LocalDate startDate);
 
     // 조건이 null이면 해당 조건은 무시하고, 여러 조건은 AND로 검색한다.
     @Query("""
@@ -21,13 +27,13 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
                    or lower(t.tourName) like lower(concat('%', :keyword, '%'))
                    or lower(t.description) like lower(concat('%', :keyword, '%')))
               and (:theme is null or t.theme = :theme)
-              and (:maxPrice is null or t.basePrice <= :maxPrice)
+              and (:maxPrice is null or t.price <= :maxPrice)
               and (:departureDate is null or t.startDate = :departureDate)
             """)
     Page<Tour> search(
-            @Param("statuses") Collection<Tour.Status> statuses,
+            @Param("statuses") Collection<TourStatus> statuses,
             @Param("keyword") String keyword,
-            @Param("theme") Tour.Theme theme,
+            @Param("theme") Theme theme,
             @Param("maxPrice") Integer maxPrice,
             @Param("departureDate") LocalDate departureDate,
             Pageable pageable
