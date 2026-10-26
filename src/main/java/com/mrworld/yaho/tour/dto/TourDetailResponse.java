@@ -24,4 +24,5 @@ public class TourDetailResponse {
     private TourStatus tourStatus;
     private List<TourLevel> availableTourLevels;
     private List<DrinkOptionResponse> drinkOptions;
+    private List<TourGiftResponse> gifts;
 }

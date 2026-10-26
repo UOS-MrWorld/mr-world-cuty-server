@@ -8,6 +8,7 @@ import com.mrworld.yaho.inventory.InventoryItemRepository;
 import com.mrworld.yaho.tour.dto.DrinkOptionResponse;
 import com.mrworld.yaho.tour.dto.TourCreateRequest;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
+import com.mrworld.yaho.tour.dto.TourGiftResponse;
 import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
 import com.mrworld.yaho.tour.dto.TourResponse;
@@ -85,6 +86,13 @@ public class TourService {
                                 .optionId(drinkOption.getOptionId())
                                 .drinkName(drinkOption.getDrinkName())
                                 .drinkPrice(drinkOption.getDrinkPrice())
+                                .build())
+                        .toList())
+                .gifts(tour.getTourGifts().stream()
+                        .map(gift -> TourGiftResponse.builder()
+                                .itemId(gift.getInventoryItem().getItemId())
+                                .itemName(gift.getInventoryItem().getItemName())
+                                .quantityPerGuest(gift.getQuantityPerGuest())
                                 .build())
                         .toList())
                 .build();

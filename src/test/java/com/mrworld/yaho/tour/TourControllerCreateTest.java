@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -75,6 +76,24 @@ class TourControllerCreateTest {
         assertThat(tour.getTourGifts()).hasSize(1);
         assertThat(tour.getTourGifts().get(0).getInventoryItem().getItemId()).isEqualTo(scarf.getItemId());
         assertThat(tour.getTourGifts().get(0).getQuantityPerGuest()).isEqualTo(2);
+    }
+
+    @Test
+    void 등록한_기념품은_고객_상세_조회에_나온다() throws Exception {
+        String response = mockMvc.perform(post(URL).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("2026-11-20", "2026-11-23", 450000, "PREMIUM_VAN_10",
+                                "[{\"itemId\":" + scarf.getItemId() + ",\"quantityPerGuest\":2}]")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Long tourId = ((Number) JsonPath.read(response, "$.tourId")).longValue();
+
+        mockMvc.perform(get("/api/v1/customer/tours/" + tourId).header("Authorization", bearer(Role.CUSTOMER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gifts.length()").value(1))
+                .andExpect(jsonPath("$.gifts[0].itemId").value(scarf.getItemId()))
+                .andExpect(jsonPath("$.gifts[0].itemName").value("스카프"))
+                .andExpect(jsonPath("$.gifts[0].quantityPerGuest").value(2));
     }
 
     @Test
