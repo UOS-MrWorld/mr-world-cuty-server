@@ -13,6 +13,7 @@ import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,6 +26,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -136,6 +138,33 @@ class TourServiceTest {
         VoiceSearchResponse response = tourService.voiceSearch(voiceRequest("제주도를 가고 싶어", null, null));
 
         assertThat(response.getTours()).extracting(TourSummaryResponse::getTourId).containsExactly(2L);
+    }
+
+    @Test
+    void 테마_단어가_없으면_후보를_자르지_않고_모두_조회한다() {
+        when(tourRepository.search(any(), any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        tourService.voiceSearch(voiceRequest("제주도를 가고 싶어", null, null));
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(tourRepository).search(any(), eq(null), eq(null), eq(null), eq(null), captor.capture());
+        assertThat(captor.getValue().isPaged()).isFalse();
+    }
+
+    @Test
+    void 테마_단어가_없을_때_일치하는_상품이_많으면_20개까지만_반환한다() {
+        List<Tour> jejuTours = LongStream.rangeClosed(1, 25)
+                .mapToObj(id -> tour(id, Theme.HEALING, "제주 투어 " + id, null,
+                        LocalDate.parse("2026-11-01").plusDays(id).toString()))
+                .toList();
+        when(tourRepository.search(any(), any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(jejuTours));
+
+        VoiceSearchResponse response = tourService.voiceSearch(voiceRequest("제주도를 가고 싶어", null, null));
+
+        assertThat(response.getTours()).hasSize(20);
+        assertThat(response.getTours().get(0).getTourId()).isEqualTo(1L);
     }
 
     @Test
