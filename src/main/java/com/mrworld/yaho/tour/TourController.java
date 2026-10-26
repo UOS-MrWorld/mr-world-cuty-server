@@ -5,9 +5,11 @@ import com.mrworld.yaho.booking.dto.QuoteRequest;
 import com.mrworld.yaho.booking.dto.QuoteResponse;
 import com.mrworld.yaho.common.dto.ResultDto;
 import com.mrworld.yaho.config.SwaggerExamples;
+import com.mrworld.yaho.tour.dto.TourCreateRequest;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
+import com.mrworld.yaho.tour.dto.TourResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchResponse;
@@ -21,6 +23,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -202,5 +205,40 @@ public class TourController {
     ) {
         Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getQuote(tourId, customerId, request));
+    }
+
+    @PostMapping("/staff/tours")
+    @Operation(summary = "여행 상품 등록",
+            description = "직원이 투어 일정·가격·기본 교통·기념품 구성을 등록합니다. 등록된 상품은 모집 중 상태로 시작합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "등록 성공", useReturnTypeSchema = true),
+            @ApiResponse(responseCode = "400", description = "날짜 범위·가격·교통·기념품 수량 오류",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
+                    )),
+            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
+                    )),
+            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
+                    )),
+            @ApiResponse(responseCode = "404", description = "지정한 기념품 재고가 존재하지 않음",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
+                    )),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
+                    ))
+    })
+    public ResponseEntity<TourResponse> createTour(@RequestBody @Valid TourCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(tourService.createTour(request));
     }
 }
