@@ -10,12 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -126,6 +128,66 @@ class TourControllerTest {
         mockMvc.perform(get(BASE_URL + "/999999").header("Authorization", bearer(Role.CUSTOMER)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(404));
+    }
+
+    @Test
+    void 음성_검색은_문장의_테마로_상품을_찾는다() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.CUSTOMER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"queryText\": \"부모님이랑 갈 힐링 여행 찾아줘\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recognizedText").value("부모님이랑 갈 힐링 여행 찾아줘"))
+                .andExpect(jsonPath("$.tours.length()").value(1))
+                .andExpect(jsonPath("$.tours[0].theme").value("HEALING"))
+                .andExpect(jsonPath("$.tours[0].tourName").value("효도 힐링 투어"));
+    }
+
+    @Test
+    void 음성_검색은_가격과_날짜_조건을_함께_적용한다() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.CUSTOMER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"queryText\": \"골프 여행 찾아줘\", \"maxPrice\": 100000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tours.length()").value(0));
+
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.CUSTOMER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"queryText\": \"제주도 가고 싶어\", \"departureDate\": \"2026-11-20\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tours.length()").value(1))
+                .andExpect(jsonPath("$.tours[0].tourName").value("효도 힐링 투어"));
+    }
+
+    @Test
+    void 음성_검색의_잘못된_요청은_400이다() throws Exception {
+        for (String body : new String[]{
+                "{\"queryText\": \"   \"}",
+                "{}",
+                "{\"queryText\": \"골프\", \"maxPrice\": -1}",
+                "{\"queryText\": \"골프\", \"departureDate\": \"20261020\"}"
+        }) {
+            mockMvc.perform(post(BASE_URL + "/voice-search")
+                            .header("Authorization", bearer(Role.CUSTOMER))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(400));
+        }
+    }
+
+    @Test
+    void 음성_검색은_토큰이_없으면_401_직원이면_403이다() throws Exception {
+        String body = "{\"queryText\": \"힐링 여행\"}";
+
+        mockMvc.perform(post(BASE_URL + "/voice-search").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post(BASE_URL + "/voice-search")
+                        .header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
     }
 
     private String bearer(Role role) {
