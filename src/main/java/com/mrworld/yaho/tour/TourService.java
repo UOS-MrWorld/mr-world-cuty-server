@@ -3,10 +3,14 @@ package com.mrworld.yaho.tour;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.exception.NotFoundException;
+import com.mrworld.yaho.inventory.InventoryItem;
+import com.mrworld.yaho.inventory.InventoryItemRepository;
 import com.mrworld.yaho.tour.dto.DrinkOptionResponse;
+import com.mrworld.yaho.tour.dto.TourCreateRequest;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
+import com.mrworld.yaho.tour.dto.TourResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
@@ -27,6 +31,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +59,7 @@ public class TourService {
 
     private final TourRepository tourRepository;
     private final DrinkOptionRepository drinkOptionRepository;
+    private final InventoryItemRepository inventoryItemRepository;
 
     public TourListResponse getTours(TourListRequest request) {
         return toListResponse(tourRepository.findByTourStatusIn(VISIBLE_STATUSES, request.toPageable()));
@@ -132,6 +139,50 @@ public class TourService {
                 .recognizedText(queryText)
                 .tours(tours)
                 .build();
+    }
+
+    // 직원이 등록한 상품은 모집 중 상태로 시작하고, 기념품 구성(TourGift)도 함께 저장한다.
+    @Transactional
+    public TourResponse createTour(TourCreateRequest request) {
+        if (request.getEndDate().isBefore(request.getStartDate())) {
+            throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
+        }
+
+        List<TourCreateRequest.GiftItem> gifts = request.getGifts() == null ? List.of() : request.getGifts();
+        Map<Long, InventoryItem> items = findGiftItems(gifts);
+
+        Tour tour = Tour.create(
+                request.getTheme(),
+                request.getTourName().trim(),
+                request.getDescription(),
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getBasePrice(),
+                request.getDefaultTransport()
+        );
+        gifts.forEach(gift -> tour.addGift(items.get(gift.getItemId()), gift.getQuantityPerGuest()));
+
+        Tour saved = tourRepository.save(tour);
+        return TourResponse.builder()
+                .tourId(saved.getTourId())
+                .tourStatus(saved.getTourStatus())
+                .createdAt(saved.getCreatedAt())
+                .build();
+    }
+
+    // 같은 기념품을 두 번 넣거나 없는 재고를 지정하면 등록하지 않는다.
+    private Map<Long, InventoryItem> findGiftItems(List<TourCreateRequest.GiftItem> gifts) {
+        List<Long> itemIds = gifts.stream().map(TourCreateRequest.GiftItem::getItemId).toList();
+        if (itemIds.stream().distinct().count() != itemIds.size()) {
+            throw new IllegalArgumentException("같은 기념품을 중복해서 지정할 수 없습니다.");
+        }
+
+        Map<Long, InventoryItem> items = inventoryItemRepository.findAllById(itemIds).stream()
+                .collect(Collectors.toMap(InventoryItem::getItemId, Function.identity()));
+        if (items.size() != itemIds.size()) {
+            throw new NotFoundException("존재하지 않는 기념품 재고입니다.");
+        }
+        return items;
     }
 
     private List<Theme> detectThemes(String queryText) {
