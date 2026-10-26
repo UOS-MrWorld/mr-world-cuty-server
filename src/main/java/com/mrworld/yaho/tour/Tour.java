@@ -4,6 +4,8 @@ import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.inventory.InventoryItem;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,11 +13,13 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -60,6 +64,11 @@ public class Tour {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // 기념품 구성은 Tour와 생명주기를 함께한다. (합성 관계)
+    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TourGift> tourGifts = new ArrayList<>();
+
     public static Tour create(
             Theme theme,
             String tourName,
@@ -79,6 +88,10 @@ public class Tour {
                 .defaultTransport(defaultTransport)
                 .tourStatus(TourStatus.RECRUITING)
                 .build();
+    }
+
+    public void addGift(InventoryItem inventoryItem, int quantityPerGuest) {
+        tourGifts.add(TourGift.create(this, inventoryItem, quantityPerGuest));
     }
 
     // HONEYMOON/HEALING은 GRAND 이상만 선택 가능
