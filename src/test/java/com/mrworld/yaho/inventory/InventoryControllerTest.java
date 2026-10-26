@@ -7,9 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -56,6 +58,37 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.content[0].itemName").value("스카프"))
                 .andExpect(jsonPath("$.content[0].quantity").value(92))
                 .andExpect(jsonPath("$.content[0].updatedAt").exists());
+    }
+
+    @Test
+    void 물품을_등록하면_201이고_같은_이름은_409이다() throws Exception {
+        mockMvc.perform(post(BASE_URL).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"itemName\":\"에코백\",\"quantity\":100}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.itemId").exists())
+                .andExpect(jsonPath("$.itemName").value("에코백"))
+                .andExpect(jsonPath("$.quantity").value(100))
+                .andExpect(jsonPath("$.createdAt").exists());
+
+        mockMvc.perform(post(BASE_URL).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"itemName\":\" 스카프 \",\"quantity\":10}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void 등록_요청이_잘못되면_400이다() throws Exception {
+        String[] bodies = {
+                "{\"itemName\":\"  \",\"quantity\":10}",
+                "{\"itemName\":\"에코백\",\"quantity\":-1}",
+                "{\"itemName\":\"에코백\"}"
+        };
+        for (String body : bodies) {
+            mockMvc.perform(post(BASE_URL).header("Authorization", bearer(Role.STAFF))
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     private String bearer(Role role) {

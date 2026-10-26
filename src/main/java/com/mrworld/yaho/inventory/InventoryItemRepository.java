@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface InventoryItemRepository extends JpaRepository<InventoryItem, Long> {
     // 물품명 검색어가 들어간 재고만 조회한다.
     Page<InventoryItem> findByItemNameContaining(String keyword, Pageable pageable);
+
+    boolean existsByItemName(String itemName);
 }

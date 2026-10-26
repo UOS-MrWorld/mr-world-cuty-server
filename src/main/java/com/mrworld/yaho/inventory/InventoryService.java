@@ -1,7 +1,9 @@
 package com.mrworld.yaho.inventory;
 
+import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.inventory.dto.InventoryListRequest;
 import com.mrworld.yaho.inventory.dto.InventoryListResponse;
+import com.mrworld.yaho.inventory.dto.InventoryRegisterRequest;
 import com.mrworld.yaho.inventory.dto.InventoryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,5 +25,16 @@ public class InventoryService {
                 .content(page.getContent().stream().map(InventoryResponse::from).toList())
                 .totalElements(page.getTotalElements())
                 .build();
+    }
+
+    @Transactional
+    public InventoryResponse registerItem(InventoryRegisterRequest request) {
+        String itemName = request.getItemName().trim();
+        if (inventoryItemRepository.existsByItemName(itemName)) {
+            throw new ConflictException("이미 등록된 물품명입니다.");
+        }
+
+        InventoryItem item = inventoryItemRepository.save(InventoryItem.create(itemName, request.getQuantity()));
+        return InventoryResponse.from(item);
     }
 }
