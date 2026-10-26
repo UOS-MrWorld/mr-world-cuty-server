@@ -9,4 +9,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, Lo
     Page<InventoryItem> findByItemNameContaining(String keyword, Pageable pageable);
 
     boolean existsByItemName(String itemName);
+
+    // 수정 시 자기 자신을 뺀 다른 재고와 이름이 겹치는지 확인한다.
+    boolean existsByItemNameAndItemIdNot(String itemName, Long itemId);
 }

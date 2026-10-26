@@ -47,4 +47,9 @@ public class InventoryItem {
                 .quantity(quantity)
                 .build();
     }
+
+    public void update(String itemName, Integer quantity) {
+        if (itemName != null) this.itemName = itemName;
+        if (quantity != null) this.quantity = quantity;
+    }
 }

@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -89,6 +90,40 @@ class InventoryControllerTest {
                             .contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isBadRequest());
         }
+    }
+
+    @Test
+    void 보낸_값만_수정한다() throws Exception {
+        mockMvc.perform(patch(BASE_URL + "/" + scarf.getItemId()).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"quantity\":120}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemName").value("스카프"))
+                .andExpect(jsonPath("$.quantity").value(120))
+                .andExpect(jsonPath("$.updatedAt").exists());
+
+        // 자기 자신의 이름으로 바꾸는 건 중복이 아니다.
+        mockMvc.perform(patch(BASE_URL + "/" + scarf.getItemId()).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"itemName\":\"스카프\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void 수정_오류는_명세의_상태코드를_반환한다() throws Exception {
+        String url = BASE_URL + "/" + scarf.getItemId();
+        mockMvc.perform(patch(url).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch(url).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"quantity\":-5}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch(url).header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"itemName\":\"텀블러\"}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch(BASE_URL + "/99999").header("Authorization", bearer(Role.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"quantity\":1}"))
+                .andExpect(status().isNotFound());
     }
 
     private String bearer(Role role) {

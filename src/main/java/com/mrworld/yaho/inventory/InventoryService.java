@@ -1,10 +1,12 @@
 package com.mrworld.yaho.inventory;
 
 import com.mrworld.yaho.common.exception.ConflictException;
+import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.inventory.dto.InventoryListRequest;
 import com.mrworld.yaho.inventory.dto.InventoryListResponse;
 import com.mrworld.yaho.inventory.dto.InventoryRegisterRequest;
 import com.mrworld.yaho.inventory.dto.InventoryResponse;
+import com.mrworld.yaho.inventory.dto.InventoryUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,27 @@ public class InventoryService {
         }
 
         InventoryItem item = inventoryItemRepository.save(InventoryItem.create(itemName, request.getQuantity()));
+        return InventoryResponse.from(item);
+    }
+
+    // 물품명과 수량 중 보낸 값만 바꾼다.
+    @Transactional
+    public InventoryResponse updateItem(Long itemId, InventoryUpdateRequest request) {
+        if (request.getItemName() == null && request.getQuantity() == null) {
+            throw new IllegalArgumentException("수정할 값이 없습니다.");
+        }
+
+        InventoryItem item = inventoryItemRepository.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 재고 물품입니다."));
+
+        String itemName = request.getItemName() == null ? null : request.getItemName().trim();
+        if (itemName != null && inventoryItemRepository.existsByItemNameAndItemIdNot(itemName, itemId)) {
+            throw new ConflictException("이미 등록된 물품명입니다.");
+        }
+
+        item.update(itemName, request.getQuantity());
+        // 응답의 updatedAt이 이번 수정 시각이 되도록 바로 반영한다.
+        inventoryItemRepository.flush();
         return InventoryResponse.from(item);
     }
 }
