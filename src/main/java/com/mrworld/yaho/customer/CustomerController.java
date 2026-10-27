@@ -1,10 +1,11 @@
 package com.mrworld.yaho.customer;
 
+import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.dto.ResultDto;
 import com.mrworld.yaho.config.SwaggerExamples;
 import com.mrworld.yaho.customer.dto.CustomerDetailResponse;
 import com.mrworld.yaho.customer.dto.CustomerListRequest;
-import com.mrworld.yaho.customer.dto.CustomerListResponse;
+import com.mrworld.yaho.customer.dto.CustomerSummaryResponse;
 import com.mrworld.yaho.customer.dto.DiscountRequest;
 import com.mrworld.yaho.customer.dto.DiscountResponse;
 import com.mrworld.yaho.customer.dto.LoyaltyPolicyResponse;
@@ -84,7 +85,7 @@ public class CustomerController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<CustomerListResponse> getCustomers(@ParameterObject @Valid CustomerListRequest request) {
+    public ResponseEntity<PageResponse<CustomerSummaryResponse>> getCustomers(@ParameterObject @Valid CustomerListRequest request) {
         return ResponseEntity.ok(customerService.getCustomers(request));
     }
 

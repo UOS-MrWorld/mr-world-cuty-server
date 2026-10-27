@@ -1,9 +1,9 @@
 package com.mrworld.yaho.inventory;
 
+import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.dto.ResultDto;
 import com.mrworld.yaho.config.SwaggerExamples;
 import com.mrworld.yaho.inventory.dto.InventoryListRequest;
-import com.mrworld.yaho.inventory.dto.InventoryListResponse;
 import com.mrworld.yaho.inventory.dto.InventoryRegisterRequest;
 import com.mrworld.yaho.inventory.dto.InventoryResponse;
 import com.mrworld.yaho.inventory.dto.InventoryUpdateRequest;
@@ -60,7 +60,7 @@ public class InventoryController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<InventoryListResponse> getItems(@ParameterObject @Valid InventoryListRequest request) {
+    public ResponseEntity<PageResponse<InventoryResponse>> getItems(@ParameterObject @Valid InventoryListRequest request) {
         return ResponseEntity.ok(inventoryService.getItems(request));
     }
 

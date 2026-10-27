@@ -3,17 +3,16 @@ package com.mrworld.yaho.booking;
 import com.mrworld.yaho.booking.dto.BookingCancelResponse;
 import com.mrworld.yaho.booking.dto.BookingDetailResponse;
 import com.mrworld.yaho.booking.dto.BookingListRequest;
-import com.mrworld.yaho.booking.dto.BookingListResponse;
 import com.mrworld.yaho.booking.dto.BookingRequest;
 import com.mrworld.yaho.booking.dto.BookingResponse;
 import com.mrworld.yaho.booking.dto.BookingSummaryResponse;
 import com.mrworld.yaho.booking.dto.BookingUpdateRequest;
 import com.mrworld.yaho.booking.dto.BookingUpdateResponse;
-import com.mrworld.yaho.booking.dto.TravelHistoryListResponse;
-import com.mrworld.yaho.booking.dto.TravelHistoryRequest;
-import com.mrworld.yaho.booking.dto.TravelHistoryResponse;
 import com.mrworld.yaho.booking.dto.QuoteRequest;
 import com.mrworld.yaho.booking.dto.QuoteResponse;
+import com.mrworld.yaho.booking.dto.TravelHistoryResponse;
+import com.mrworld.yaho.common.dto.PageResponse;
+import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.PaymentStatus;
 import com.mrworld.yaho.common.enums.Theme;
@@ -33,6 +32,7 @@ import com.mrworld.yaho.tour.Tour;
 import com.mrworld.yaho.tour.TourRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +47,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BookingService {
+
+    // 내 예약 목록은 최근에 만든 예약부터, 여행 내역은 여행 시작일이 늦은(최근) 여행부터 보여준다.
+    private static final Sort BOOKING_LIST_SORT = Sort.by(Sort.Direction.DESC, "createdAt", "bookingId");
+    private static final Sort TRAVEL_HISTORY_SORT = Sort.by(Sort.Direction.DESC, "tour.startDate", "bookingId");
 
     private static final int HONEYMOON_GUEST_COUNT = 2;
     private static final int CAR_2_MAX_GUEST_COUNT = 2;
@@ -90,24 +94,18 @@ public class BookingService {
 
     // 로그인 고객의 예약을 상태별로 최근 순 조회한다.
     @Transactional(readOnly = true)
-    public BookingListResponse getBookings(Long customerId, BookingListRequest request) {
-        Page<Booking> page = bookingRepository.findMyBookings(customerId, request.getStatus(), request.toPageable());
-
-        return BookingListResponse.builder()
-                .content(page.getContent().stream().map(BookingSummaryResponse::from).toList())
-                .totalElements(page.getTotalElements())
-                .build();
+    public PageResponse<BookingSummaryResponse> getBookings(Long customerId, BookingListRequest request) {
+        Page<Booking> page = bookingRepository.findMyBookings(
+                customerId, request.getStatus(), request.toPageable(BOOKING_LIST_SORT));
+        return PageResponse.of(page, BookingSummaryResponse::from);
     }
 
     // 고객의 여행 내역(예약한 여행과 완료된 여행)을 최근 순으로 조회한다. 로그인 직후 팝업에 쓴다.
     @Transactional(readOnly = true)
-    public TravelHistoryListResponse getTravelHistory(Long customerId, TravelHistoryRequest request) {
-        Page<Booking> page = bookingRepository.findTravelHistoryByCustomerId(customerId, request.toPageable());
-
-        return TravelHistoryListResponse.builder()
-                .content(page.getContent().stream().map(TravelHistoryResponse::from).toList())
-                .totalElements(page.getTotalElements())
-                .build();
+    public PageResponse<TravelHistoryResponse> getTravelHistory(Long customerId, PagingRequest request) {
+        Page<Booking> page = bookingRepository.findTravelHistoryByCustomerId(
+                customerId, request.toPageable(TRAVEL_HISTORY_SORT));
+        return PageResponse.of(page, TravelHistoryResponse::from);
     }
 
     @Transactional(readOnly = true)

@@ -1,12 +1,12 @@
 package com.mrworld.yaho.tour;
 
+import com.mrworld.yaho.common.dto.PageResponse;
+import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
-import com.mrworld.yaho.tour.dto.TourListRequest;
-import com.mrworld.yaho.tour.dto.TourListResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
@@ -85,7 +85,7 @@ class TourServiceTest {
         when(tourRepository.findByTourStatusIn(any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(tour), PageRequest.of(0, 1), 12));
 
-        TourListResponse response = tourService.getTours(new TourListRequest());
+        PageResponse<TourSummaryResponse> response = tourService.getTours(new PagingRequest());
 
         assertThat(response.getTotalElements()).isEqualTo(12);
         assertThat(response.getContent()).hasSize(1);

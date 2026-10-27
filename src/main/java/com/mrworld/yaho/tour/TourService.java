@@ -2,6 +2,8 @@ package com.mrworld.yaho.tour;
 
 import com.mrworld.yaho.booking.Booking;
 import com.mrworld.yaho.booking.BookingRepository;
+import com.mrworld.yaho.common.dto.PageResponse;
+import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourStatus;
@@ -13,17 +15,14 @@ import com.mrworld.yaho.inventory.InventoryService;
 import com.mrworld.yaho.notification.NotificationService;
 import com.mrworld.yaho.payment.PaymentService;
 import com.mrworld.yaho.tour.dto.DrinkOptionResponse;
+import com.mrworld.yaho.tour.dto.StaffTourDetailResponse;
 import com.mrworld.yaho.tour.dto.StaffTourListRequest;
-import com.mrworld.yaho.tour.dto.StaffTourListResponse;
 import com.mrworld.yaho.tour.dto.StaffTourSummaryResponse;
 import com.mrworld.yaho.tour.dto.TourCreateRequest;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourGiftResponse;
-import com.mrworld.yaho.tour.dto.TourListRequest;
-import com.mrworld.yaho.tour.dto.TourListResponse;
 import com.mrworld.yaho.tour.dto.TourResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
-import com.mrworld.yaho.tour.dto.StaffTourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import com.mrworld.yaho.tour.dto.TourUpdateRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
@@ -64,6 +63,9 @@ public class TourService {
     private static final List<TourStatus> VISIBLE_STATUSES =
             List.of(TourStatus.RECRUITING, TourStatus.CONFIRMED);
 
+    // 투어 목록(고객용 목록·검색, 직원용 현황)은 출발이 가까운 투어부터 보여준다.
+    private static final Sort TOUR_SORT = Sort.by("startDate", "tourId");
+
     // 마감 시점 결제 완료 인원이 이 수 이상이면 투어를 확정한다.
     // 허니문은 예약이 2명 단위라 결제 인원이 항상 짝수이므로, 실제로는 커플 2쌍(4명)부터 확정된다.
     private static final int MIN_CONFIRM_GUEST_COUNT = 3;
@@ -91,8 +93,9 @@ public class TourService {
     private final NotificationService notificationService;
     private final PlatformTransactionManager transactionManager;
 
-    public TourListResponse getTours(TourListRequest request) {
-        return toListResponse(tourRepository.findByTourStatusIn(VISIBLE_STATUSES, request.toPageable()));
+    public PageResponse<TourSummaryResponse> getTours(PagingRequest request) {
+        return PageResponse.of(
+                tourRepository.findByTourStatusIn(VISIBLE_STATUSES, request.toPageable(TOUR_SORT)), this::toSummary);
     }
 
     public TourDetailResponse getTourDetail(Long tourId) {
@@ -127,19 +130,19 @@ public class TourService {
                 .build();
     }
 
-    public TourListResponse searchTours(TourSearchRequest request) {
+    public PageResponse<TourSummaryResponse> searchTours(TourSearchRequest request) {
         String keyword = request.getKeyword() == null || request.getKeyword().isBlank()
                 ? null
                 : request.getKeyword().trim();
 
-        return toListResponse(tourRepository.search(
+        return PageResponse.of(tourRepository.search(
                 VISIBLE_STATUSES,
                 keyword,
                 request.getTheme(),
                 request.getMaxPrice(),
                 request.getDepartureDate(),
-                request.toPageable()
-        ));
+                request.toPageable(TOUR_SORT)
+        ), this::toSummary);
     }
 
     // 음성 인식 문장에서 테마를 찾아 필터로 쓰고, 테마가 없으면 문장에 상품명·설명의 단어가 들어 있는 상품을 찾는다.
@@ -203,33 +206,28 @@ public class TourService {
     }
 
     // 직원용 상품 현황 목록. 투어마다 결제 완료 인원 합을 함께 보여준다.
-    public StaffTourListResponse getStaffTours(StaffTourListRequest request) {
+    public PageResponse<StaffTourSummaryResponse> getStaffTours(StaffTourListRequest request) {
         if (request.getStartDateFrom() != null && request.getStartDateTo() != null
                 && request.getStartDateFrom().isAfter(request.getStartDateTo())) {
             throw new IllegalArgumentException("시작일 하한은 상한보다 늦을 수 없습니다.");
         }
 
         Page<Tour> page = tourRepository.searchForStaff(
-                request.getStatus(), request.getStartDateFrom(), request.getStartDateTo(), request.toPageable());
+                request.getStatus(), request.getStartDateFrom(), request.getStartDateTo(), request.toPageable(TOUR_SORT));
         List<Long> tourIds = page.getContent().stream().map(Tour::getTourId).toList();
         Map<Long, Long> paidGuestCounts = tourIds.isEmpty() ? Map.of()
                 : bookingRepository.sumPaidGuestCountByTourIds(tourIds).stream()
                 .collect(Collectors.toMap(BookingRepository.TourGuestCount::getTourId,
                         BookingRepository.TourGuestCount::getGuestCount));
 
-        return StaffTourListResponse.builder()
-                .content(page.getContent().stream()
-                        .map(tour -> StaffTourSummaryResponse.builder()
-                                .tourId(tour.getTourId())
-                                .tourName(tour.getTourName())
-                                .theme(tour.getTheme())
-                                .startDate(tour.getStartDate())
-                                .tourStatus(tour.getTourStatus())
-                                .paidGuestCount(paidGuestCounts.getOrDefault(tour.getTourId(), 0L).intValue())
-                                .build())
-                        .toList())
-                .totalElements(page.getTotalElements())
-                .build();
+        return PageResponse.of(page, tour -> StaffTourSummaryResponse.builder()
+                .tourId(tour.getTourId())
+                .tourName(tour.getTourName())
+                .theme(tour.getTheme())
+                .startDate(tour.getStartDate())
+                .tourStatus(tour.getTourStatus())
+                .paidGuestCount(paidGuestCounts.getOrDefault(tour.getTourId(), 0L).intValue())
+                .build());
     }
 
     // 직원용 상품 상세 현황: 투어 정보, 결제 완료 인원, 모든 예약 현황, 기념품 구성과 현재 재고
@@ -314,14 +312,6 @@ public class TourService {
         return Arrays.stream(source.split("[^\\p{L}\\p{N}]+"))
                 .filter(word -> word.length() >= 2 && !GENERIC_WORDS.contains(word))
                 .anyMatch(queryText::contains);
-    }
-
-    // 목록 조회와 검색이 같은 응답 형식을 쓴다.
-    private TourListResponse toListResponse(Page<Tour> page) {
-        return TourListResponse.builder()
-                .content(page.getContent().stream().map(this::toSummary).toList())
-                .totalElements(page.getTotalElements())
-                .build();
     }
 
     private TourSummaryResponse toSummary(Tour tour) {
