@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-// 음료 옵션을 등록하는 API가 명세에 없어서, 비어 있을 때만 기본 음료를 채워 둔다. (임시 금액)
+// 음료 옵션을 등록하는 API가 명세에 없어서, 음료 옵션이 비어 있을 때만 기본 음료를 채워 둔다.
 @Component
 @RequiredArgsConstructor
 public class DrinkOptionInitializer implements ApplicationRunner {
