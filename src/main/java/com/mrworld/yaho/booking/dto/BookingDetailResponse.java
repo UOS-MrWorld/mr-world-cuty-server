@@ -17,7 +17,7 @@ import lombok.Getter;
 import java.time.LocalDate;
 import java.util.List;
 
-// 예약 상세. paymentStatus는 결제 기능이 생기기 전까지 null이다.
+// 예약 상세. paymentStatus는 가장 최근 결제 시도의 상태이며, 결제한 적이 없으면 null이다.
 @Getter
 @Builder
 public class BookingDetailResponse {
@@ -34,7 +34,7 @@ public class BookingDetailResponse {
     private int discountRate;
     private PaymentStatus paymentStatus;
 
-    public static BookingDetailResponse from(Booking booking) {
+    public static BookingDetailResponse from(Booking booking, PaymentStatus paymentStatus) {
         return BookingDetailResponse.builder()
                 .bookingId(booking.getBookingId())
                 .tour(TourInfo.from(booking.getTour()))
@@ -47,6 +47,7 @@ public class BookingDetailResponse {
                 .bookingStatus(booking.getBookingStatus())
                 .totalPrice(booking.getTotalPrice())
                 .discountRate(booking.getDiscountRate())
+                .paymentStatus(paymentStatus)
                 .build();
     }
 

@@ -29,6 +29,9 @@ import java.util.List;
 @Builder
 public class Tour {
 
+    // 투어 시작 7일 전까지만 예약·결제할 수 있다.
+    private static final int BOOKING_CLOSE_DAYS_BEFORE_START = 7;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long tourId;
@@ -100,5 +103,10 @@ public class Tour {
             return List.of(TourLevel.GRAND, TourLevel.PREMIUM);
         }
         return List.of(TourLevel.values());
+    }
+
+    // 시작 7일 전 당일까지는 예약 가능하고, 그 다음 날부터 마감이다.
+    public boolean isBookingClosed(LocalDate today) {
+        return today.isAfter(startDate.minusDays(BOOKING_CLOSE_DAYS_BEFORE_START));
     }
 }
