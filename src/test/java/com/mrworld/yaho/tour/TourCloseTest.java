@@ -1,0 +1,202 @@
+package com.mrworld.yaho.tour;
+
+import com.mrworld.yaho.booking.Booking;
+import com.mrworld.yaho.booking.BookingRepository;
+import com.mrworld.yaho.common.enums.BookingStatus;
+import com.mrworld.yaho.common.enums.HotelGrade;
+import com.mrworld.yaho.common.enums.MealType;
+import com.mrworld.yaho.common.enums.PaymentStatus;
+import com.mrworld.yaho.common.enums.Role;
+import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.enums.TourLevel;
+import com.mrworld.yaho.common.enums.TourStatus;
+import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.customer.Customer;
+import com.mrworld.yaho.customer.CustomerRepository;
+import com.mrworld.yaho.inventory.InventoryItem;
+import com.mrworld.yaho.inventory.InventoryItemRepository;
+import com.mrworld.yaho.member.Member;
+import com.mrworld.yaho.member.MemberRepository;
+import com.mrworld.yaho.notification.SmsSender;
+import com.mrworld.yaho.payment.Payment;
+import com.mrworld.yaho.payment.PaymentRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+@SpringBootTest
+class TourCloseTest {
+
+    @Autowired
+    private TourService tourService;
+
+    @Autowired
+    private TourRepository tourRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private InventoryItemRepository inventoryItemRepository;
+
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
+
+    @MockitoBean
+    private SmsSender smsSender;
+
+    private InventoryItem scarf;
+
+    @BeforeEach
+    void setUp() {
+        cleanUp();
+        scarf = inventoryItemRepository.save(InventoryItem.create("스카프", 10));
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanUp();
+    }
+
+    @Test
+    void 결제_인원이_3명_이상이면_확정하고_재고를_차감하고_문자를_보낸다() {
+        Tour tour = saveTour(6);
+        Booking first = savePaidBooking(tour, saveCustomer("010-1111-2222"), 2);
+        Booking second = savePaidBooking(tour, saveCustomer("01033334444"), 1);
+        Booking pending = bookingRepository.save(booking(tour, saveCustomer("01055556666"), 1));
+
+        tourService.closeRecruitingTours();
+
+        assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.CONFIRMED);
+        // 1인당 2개 × 확정 3명
+        assertThat(inventoryItemRepository.findById(scarf.getItemId()).orElseThrow().getQuantity()).isEqualTo(4);
+        assertThat(statusOf(first)).isEqualTo(BookingStatus.PAID);
+        assertThat(statusOf(second)).isEqualTo(BookingStatus.PAID);
+        assertThat(statusOf(pending)).isEqualTo(BookingStatus.CANCELLED);
+
+        verify(smsSender).send(eq("01011112222"), contains("예약번호: " + first.getBookingId() + " (2명)"));
+        verify(smsSender).send(eq("01033334444"), contains("예약번호: " + second.getBookingId() + " (1명)"));
+        verify(smsSender, never()).send(eq("01055556666"), anyString());
+    }
+
+    @Test
+    void 한_고객이_여러_건_예약했으면_예약마다_문자를_보낸다() {
+        Tour tour = saveTour(6);
+        Customer customer = saveCustomer("01011112222");
+        Booking first = savePaidBooking(tour, customer, 2);
+        Booking second = savePaidBooking(tour, customer, 1);
+
+        tourService.closeRecruitingTours();
+
+        verify(smsSender).send(eq("01011112222"), contains("예약번호: " + first.getBookingId()));
+        verify(smsSender).send(eq("01011112222"), contains("예약번호: " + second.getBookingId()));
+        verify(smsSender, times(2)).send(eq("01011112222"),
+                contains("옵션: 클래식 / 3성급 호텔 / 도시락 / 프리미엄 밴"));
+    }
+
+    @Test
+    void 결제_인원이_3명_미만이면_취소하고_결제를_환불한다() {
+        Tour tour = saveTour(6);
+        Booking paid = savePaidBooking(tour, saveCustomer("01011112222"), 2);
+
+        tourService.closeRecruitingTours();
+
+        assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.CANCELLED);
+        assertThat(statusOf(paid)).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(paymentRepository.findAll()).extracting(Payment::getPaymentStatus)
+                .containsExactly(PaymentStatus.REFUNDED);
+        assertThat(inventoryItemRepository.findById(scarf.getItemId()).orElseThrow().getQuantity()).isEqualTo(10);
+        verify(smsSender, never()).send(anyString(), anyString());
+    }
+
+    @Test
+    void 아직_마감되지_않은_투어는_처리하지_않는다() {
+        Tour tour = saveTour(7);
+        savePaidBooking(tour, saveCustomer("01011112222"), 3);
+
+        tourService.closeRecruitingTours();
+
+        assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.RECRUITING);
+    }
+
+    @Test
+    void 재고가_부족한_투어는_모집_중으로_남기고_다른_투어는_처리한다() {
+        Tour shortTour = saveTour(6);
+        savePaidBooking(shortTour, saveCustomer("01011112222"), 6);
+        Tour okTour = saveTour(5);
+        savePaidBooking(okTour, saveCustomer("01033334444"), 3);
+
+        tourService.closeRecruitingTours();
+
+        // 스카프 10개로 shortTour(6명 × 2 = 12개)는 처리 순서와 상관없이 실패하고, okTour(3명 × 2 = 6개)는 확정된다.
+        assertThat(tourRepository.findById(shortTour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.RECRUITING);
+        assertThat(tourRepository.findById(okTour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.CONFIRMED);
+        verify(smsSender, never()).send(eq("01011112222"), anyString());
+        verify(smsSender).send(eq("01033334444"), anyString());
+    }
+
+    // 시작일이 오늘부터 daysLater일 뒤이고 1인당 스카프 2개를 주는 투어
+    private Tour saveTour(int daysLater) {
+        LocalDate startDate = LocalDate.now().plusDays(daysLater);
+        Tour tour = Tour.create(Theme.GOLF, "골프 챌린지 투어", null,
+                startDate, startDate.plusDays(3), 500000, Transport.PREMIUM_VAN_10);
+        tour.addGift(scarf, 2);
+        return tourRepository.save(tour);
+    }
+
+    private Booking savePaidBooking(Tour tour, Customer customer, int guestCount) {
+        Booking booking = booking(tour, customer, guestCount);
+        booking.pay(0);
+        booking = bookingRepository.save(booking);
+        paymentRepository.save(Payment.success(booking, 1_000_000, LocalDateTime.now()));
+        return booking;
+    }
+
+    private Booking booking(Tour tour, Customer customer, int guestCount) {
+        return Booking.create(tour, customer, TourLevel.CLASSIC, guestCount,
+                HotelGrade.THREE_STAR, MealType.LUNCH_BOX, Transport.PREMIUM_VAN_10, 1_000_000, 0);
+    }
+
+    private Customer saveCustomer(String phoneNum) {
+        Member member = memberRepository.save(Member.create(
+                "close-" + UUID.randomUUID(), "pw", "고객", phoneNum, "서울", Role.CUSTOMER));
+        return customerRepository.save(Customer.create(member));
+    }
+
+    private BookingStatus statusOf(Booking booking) {
+        return bookingRepository.findById(booking.getBookingId()).orElseThrow().getBookingStatus();
+    }
+
+    private void cleanUp() {
+        paymentRepository.deleteAll();
+        bookingRepository.deleteAll();
+        tourRepository.deleteAll();
+        inventoryItemRepository.deleteAll();
+    }
+}
