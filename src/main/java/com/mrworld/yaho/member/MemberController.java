@@ -15,7 +15,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import com.mrworld.yaho.security.LoginMemberId;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,8 +36,8 @@ public class MemberController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true)
     })
-    public ResponseEntity<MemberInfoResponse> getMyInfo(@LoginMemberId Long memberId) {
-        return ResponseEntity.ok(memberService.getMyInfo(memberId));
+    public ResponseEntity<MemberInfoResponse> getMyInfo(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(memberService.getMyInfo(Long.valueOf(userDetails.getUsername())));
     }
 
     @PatchMapping("/me")
@@ -50,9 +51,9 @@ public class MemberController {
                     ))
     })
     public ResponseEntity<MemberUpdateResponse> updateMyInfo(
-            @LoginMemberId Long memberId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid MemberUpdateRequest request
     ) {
-        return ResponseEntity.ok(memberService.updateMyInfo(memberId, request));
+        return ResponseEntity.ok(memberService.updateMyInfo(Long.valueOf(userDetails.getUsername()), request));
     }
 }

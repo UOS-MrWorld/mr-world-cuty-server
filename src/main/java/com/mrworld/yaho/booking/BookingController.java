@@ -25,7 +25,8 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.mrworld.yaho.security.LoginMemberId;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -66,9 +67,10 @@ public class BookingController {
                     ))
     })
     public ResponseEntity<BookingResponse> createBooking(
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid BookingRequest request
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createBooking(customerId, request));
     }
 
@@ -83,9 +85,10 @@ public class BookingController {
                     ))
     })
     public ResponseEntity<PageResponse<BookingSummaryResponse>> getBookings(
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @ParameterObject @Valid BookingListRequest request
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getBookings(customerId, request));
     }
 
@@ -105,9 +108,10 @@ public class BookingController {
                     ))
     })
     public ResponseEntity<BookingDetailResponse> getBookingDetail(
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long bookingId
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getBookingDetail(customerId, bookingId));
     }
 
@@ -138,10 +142,11 @@ public class BookingController {
                     ))
     })
     public ResponseEntity<BookingUpdateResponse> updateBookingOptions(
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long bookingId,
             @RequestBody @Valid BookingUpdateRequest request
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.updateBookingOptions(customerId, bookingId, request));
     }
 
@@ -167,9 +172,10 @@ public class BookingController {
                     ))
     })
     public ResponseEntity<BookingCancelResponse> cancelBooking(
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long bookingId
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.cancelBooking(customerId, bookingId));
     }
 
@@ -186,9 +192,10 @@ public class BookingController {
                     ))
     })
     public ResponseEntity<PageResponse<TravelHistoryResponse>> getTravelHistory(
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @ParameterObject @Valid PagingRequest request
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getTravelHistory(customerId, request));
     }
 }
