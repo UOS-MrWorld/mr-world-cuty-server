@@ -10,11 +10,18 @@ import com.mrworld.yaho.inventory.dto.InventoryUpdateRequest;
 import com.mrworld.yaho.tour.Tour;
 import com.mrworld.yaho.tour.TourGift;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// 재고 등록/조회/수정과 예약 시점의 재고 확인(validateStock), 투어 확정 시점의 재고 차감(deductStock)
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+// 재고 등록/조회/수정과 투어 확정 시점의 재고 차감(deductStock).
+// 재고가 부족해도 예약·확정을 막지 않으며, 부족 여부는 직원이 재고 목록의 현재 수량과 사용 예정 수량으로 확인한다.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -25,8 +32,13 @@ public class InventoryService {
         String keyword = request.getKeyword() == null ? "" : request.getKeyword().trim();
         Page<InventoryItem> page = inventoryItemRepository.findByItemNameContaining(keyword, request.toPageable());
 
+        Map<Long, Integer> requiredQuantities = findRequiredQuantities(
+                page.getContent().stream().map(InventoryItem::getItemId).toList());
+
         return InventoryListResponse.builder()
-                .content(page.getContent().stream().map(InventoryResponse::from).toList())
+                .content(page.getContent().stream()
+                        .map(item -> InventoryResponse.from(item, requiredQuantities.getOrDefault(item.getItemId(), 0)))
+                        .toList())
                 .totalElements(page.getTotalElements())
                 .build();
     }
@@ -39,7 +51,8 @@ public class InventoryService {
         }
 
         InventoryItem item = inventoryItemRepository.save(InventoryItem.create(itemName, request.getQuantity()));
-        return InventoryResponse.from(item);
+        // 새로 등록한 물품은 아직 어떤 투어에도 쓰이지 않는다.
+        return InventoryResponse.from(item, 0);
     }
 
     // 물품명과 수량 중 보낸 값만 바꾼다.
@@ -60,25 +73,34 @@ public class InventoryService {
         item.update(itemName, request.getQuantity());
         // 응답의 updatedAt이 이번 수정 시각이 되도록 바로 반영한다.
         inventoryItemRepository.flush();
-        return InventoryResponse.from(item);
+        return InventoryResponse.from(item, findRequiredQuantity(itemId));
     }
 
-    // 투어의 기념품마다 1인당 지급 수량 × guestCount 이상 재고가 있는지 확인한다.
-    // guestCount는 재고로 감당해야 하는 전체 인원(결제 완료 인원 + 이번 예약 인원)이다.
-    public void validateStock(Tour tour, int guestCount) {
+    // 투어 확정 시 기념품마다 1인당 지급 수량 × 확정 인원만큼 재고를 차감한다.
+    // 재고가 부족하면 마이너스가 되며, 직원이 재고 목록에서 보고 채울 수 있도록 경고 로그를 남긴다.
+    @Transactional
+    public void deductStock(Tour tour, int confirmedGuestCount) {
         for (TourGift tourGift : tour.getTourGifts()) {
-            int required = tourGift.getQuantityPerGuest() * guestCount;
-            if (tourGift.getInventoryItem().getQuantity() < required) {
-                throw new ConflictException("기념품 재고가 부족하여 예약할 수 없습니다.");
+            InventoryItem item = tourGift.getInventoryItem();
+            item.deduct(tourGift.getQuantityPerGuest() * confirmedGuestCount);
+            if (item.getQuantity() < 0) {
+                log.warn("기념품 재고 부족 itemId={}, itemName={}, 부족 수량={}, tourId={}",
+                        item.getItemId(), item.getItemName(), -item.getQuantity(), tour.getTourId());
             }
         }
     }
 
-    // 투어 확정 시 기념품마다 1인당 지급 수량 × 확정 인원만큼 재고를 차감한다.
-    @Transactional
-    public void deductStock(Tour tour, int confirmedGuestCount) {
-        for (TourGift tourGift : tour.getTourGifts()) {
-            tourGift.getInventoryItem().deduct(tourGift.getQuantityPerGuest() * confirmedGuestCount);
+    // 물품별 사용 예정 수량. 사용 예정이 없는 물품은 맵에 없다.
+    private Map<Long, Integer> findRequiredQuantities(List<Long> itemIds) {
+        if (itemIds.isEmpty()) {
+            return Map.of();
         }
+        return inventoryItemRepository.sumRequiredQuantityByItemIds(itemIds).stream()
+                .collect(Collectors.toMap(InventoryItemRepository.ItemRequiredQuantity::getItemId,
+                        required -> required.getRequiredQuantity().intValue()));
+    }
+
+    private int findRequiredQuantity(Long itemId) {
+        return findRequiredQuantities(List.of(itemId)).getOrDefault(itemId, 0);
     }
 }

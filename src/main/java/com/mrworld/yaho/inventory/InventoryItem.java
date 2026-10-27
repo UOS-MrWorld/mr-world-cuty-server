@@ -49,10 +49,8 @@ public class InventoryItem {
     }
 
     // 투어 확정 시 기념품을 지급한 만큼 재고를 줄인다.
+    // 재고가 부족해도 여행은 진행되므로 마이너스까지 줄이며, 마이너스는 직원이 채워야 할 부족 수량이다.
     public void deduct(int amount) {
-        if (quantity < amount) {
-            throw new IllegalStateException("재고가 부족하여 차감할 수 없습니다. (" + itemName + ")");
-        }
         this.quantity -= amount;
     }
 

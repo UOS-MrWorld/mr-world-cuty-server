@@ -24,7 +24,6 @@ import com.mrworld.yaho.common.exception.ForbiddenException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
-import com.mrworld.yaho.inventory.InventoryService;
 import com.mrworld.yaho.payment.Payment;
 import com.mrworld.yaho.payment.PaymentRepository;
 import com.mrworld.yaho.payment.PaymentService;
@@ -56,7 +55,6 @@ public class BookingService {
     private final CustomerRepository customerRepository;
     private final DrinkOptionRepository drinkOptionRepository;
     private final BookingRepository bookingRepository;
-    private final InventoryService inventoryService;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
 
@@ -68,11 +66,6 @@ public class BookingService {
 
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 고객입니다."));
-
-        // 결제 완료 인원과 이번 예약 인원을 합쳐 기념품 재고가 충분한지 확인한다.
-        int paidGuestCount = bookingRepository.sumGuestCountByTourIdAndBookingStatus(
-                tour.getTourId(), BookingStatus.PAID);
-        inventoryService.validateStock(tour, paidGuestCount + request.getGuestCount());
 
         Map<Long, DrinkOption> drinkOptions = findDrinkOptions(request.getDrinkOptions());
         Booking booking = Booking.create(
@@ -142,13 +135,6 @@ public class BookingService {
         Tour tour = findBookableTour(booking.getTour().getTourId());
         QuoteRequest merged = mergeOptions(booking, request);
         validateBookingOptions(tour, merged);
-
-        // 인원을 바꾸면 예약 생성과 같은 기준으로 기념품 재고를 다시 확인한다.
-        if (request.getGuestCount() != null) {
-            int paidGuestCount = bookingRepository.sumGuestCountByTourIdAndBookingStatus(
-                    tour.getTourId(), BookingStatus.PAID);
-            inventoryService.validateStock(tour, paidGuestCount + merged.getGuestCount());
-        }
 
         Map<Long, DrinkOption> drinkOptions = findDrinkOptions(merged.getDrinkOptions());
         booking.updateOptions(

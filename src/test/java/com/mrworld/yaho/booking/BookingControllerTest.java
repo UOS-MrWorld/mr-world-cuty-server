@@ -80,7 +80,7 @@ class BookingControllerTest {
     private Tour golfTour;
     private DrinkOption coffee;
 
-    // 스카프 10개, 1인당 2개 지급 → 결제 완료 인원 포함 5명까지 예약 가능
+    // 스카프 10개, 1인당 2개 지급하는 골프 투어
     @BeforeEach
     void setUp() {
         cleanUp();
@@ -145,24 +145,9 @@ class BookingControllerTest {
     }
 
     @Test
-    void 결제_완료_인원과_합쳐_기념품_재고가_부족하면_409이다() throws Exception {
+    void 기념품_재고가_부족해도_예약할_수_있다() throws Exception {
+        // 스카프 10개, 1인당 2개 → 결제 완료 4명 + 이번 2명은 12개가 필요하지만 예약은 막지 않는다.
         savePaidBooking(4);
-
-        mockMvc.perform(post(URL)
-                        .header("Authorization", bearer())
-                        .contentType(MediaType.APPLICATION_JSON).content(body(golfTour.getTourId(), 2)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(409));
-
-        mockMvc.perform(post(URL)
-                        .header("Authorization", bearer())
-                        .contentType(MediaType.APPLICATION_JSON).content(body(golfTour.getTourId(), 1)))
-                .andExpect(status().isCreated());
-    }
-
-    @Test
-    void 결제_전_예약은_재고_계산에_포함하지_않는다() throws Exception {
-        bookingRepository.save(booking(4));
 
         mockMvc.perform(post(URL)
                         .header("Authorization", bearer())
@@ -334,19 +319,15 @@ class BookingControllerTest {
     }
 
     @Test
-    void 인원을_늘려_기념품_재고가_부족하면_409이다() throws Exception {
+    void 인원을_늘려_기념품_재고가_부족해져도_수정할_수_있다() throws Exception {
         savePaidBooking(3);
         Booking booking = bookingRepository.save(booking(1));
 
         mockMvc.perform(patch(URL + "/" + booking.getBookingId())
                         .header("Authorization", bearer())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"guestCount\": 3}"))
-                .andExpect(status().isConflict());
-
-        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
-                        .header("Authorization", bearer())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"guestCount\": 2}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.guestCount").value(3));
     }
 
     @Test

@@ -17,7 +17,6 @@ import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
-import com.mrworld.yaho.inventory.InventoryService;
 import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.tour.DrinkOption;
 import com.mrworld.yaho.tour.DrinkOptionRepository;
@@ -38,7 +37,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -57,9 +55,6 @@ class BookingServiceTest {
 
     @Mock
     private BookingRepository bookingRepository;
-
-    @Mock
-    private InventoryService inventoryService;
 
     @InjectMocks
     private BookingService bookingService;
@@ -238,33 +233,6 @@ class BookingServiceTest {
         assertThat(saved.getCustomer()).isSameAs(customer);
         assertThat(saved.getBookingDrinkOptions()).hasSize(1);
         assertThat(saved.getBookingDrinkOptions().get(0).getQuantity()).isEqualTo(2);
-    }
-
-    @Test
-    void 재고는_결제_완료_인원과_이번_예약_인원을_합쳐_확인한다() {
-        Tour tour = openTour(Theme.GOLF);
-        when(tourRepository.findById(1L)).thenReturn(Optional.of(tour));
-        when(customerRepository.findById(7L)).thenReturn(Optional.of(Customer.create(member(7L))));
-        when(bookingRepository.sumGuestCountByTourIdAndBookingStatus(1L, BookingStatus.PAID)).thenReturn(5);
-        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        bookingService.createBooking(7L, bookingRequest(1L, TourLevel.CLASSIC, 2, Transport.PREMIUM_VAN_10));
-
-        verify(inventoryService).validateStock(tour, 7);
-    }
-
-    @Test
-    void 재고가_부족하면_예약을_저장하지_않는다() {
-        Tour tour = openTour(Theme.GOLF);
-        when(tourRepository.findById(1L)).thenReturn(Optional.of(tour));
-        when(customerRepository.findById(7L)).thenReturn(Optional.of(Customer.create(member(7L))));
-        doThrow(new ConflictException("기념품 재고가 부족하여 예약할 수 없습니다."))
-                .when(inventoryService).validateStock(tour, 2);
-
-        assertThatThrownBy(() -> bookingService.createBooking(
-                7L, bookingRequest(1L, TourLevel.CLASSIC, 2, Transport.PREMIUM_VAN_10)))
-                .isInstanceOf(ConflictException.class);
-        verify(bookingRepository, never()).save(any());
     }
 
     @Test
