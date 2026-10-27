@@ -52,6 +52,22 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             """)
     int countCompletedToursByCustomerId(@Param("customerId") Long customerId);
 
+    // 여러 고객의 완료 여행 횟수를 한 번에 센다. 완료 여행이 없는 고객은 결과에 없다.
+    @Query("""
+            select b.customer.memberId as customerId, count(distinct b.tour) as tourCount from Booking b
+            where b.customer.memberId in :customerIds
+              and b.bookingStatus = com.mrworld.yaho.common.enums.BookingStatus.PAID
+              and b.tour.tourStatus = com.mrworld.yaho.common.enums.TourStatus.COMPLETED
+            group by b.customer.memberId
+            """)
+    List<CustomerTourCount> countCompletedToursByCustomerIds(@Param("customerIds") List<Long> customerIds);
+
+    interface CustomerTourCount {
+        Long getCustomerId();
+
+        Long getTourCount();
+    }
+
     // 고객의 여행 내역: 결제 완료 예약 중 투어가 모집 중·확정·완료인 것 (취소된 투어 제외)
     @EntityGraph(attributePaths = "tour")
     @Query("""
