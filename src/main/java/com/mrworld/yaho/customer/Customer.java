@@ -53,6 +53,12 @@ public class Customer {
         this.loyaltyGrade = LoyaltyGrade.of(completedTourCount);
     }
 
+    // 직원이 단골 할인을 켠다. 이후 예약·결제에 등급 할인율이 적용된다.
+    public void activateDiscount(LocalDateTime appliedAt) {
+        this.loyaltyDiscountApplied = true;
+        this.loyaltyDiscountAppliedAt = appliedAt;
+    }
+
     // 직원이 할인을 적용한 고객만 등급 할인율을 받는다.
     public int currentDiscountRate() {
         return loyaltyDiscountApplied ? loyaltyGrade.getDiscountRate() : 0;
