@@ -1,5 +1,6 @@
 package com.mrworld.yaho.inventory;
 
+import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
@@ -18,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 // 재고 등록/조회/수정과 투어 확정 시점의 재고 차감(deductStock).
 // 재고가 부족해도 예약·확정을 막지 않으며, 부족 여부는 직원이 재고 목록의 현재 수량과 사용 예정 수량으로 확인한다.
@@ -35,11 +35,11 @@ public class InventoryService {
         String keyword = request.getKeyword() == null ? "" : request.getKeyword().trim();
         Page<InventoryItem> page = inventoryItemRepository.findByItemNameContaining(keyword, request.toPageable(ITEM_SORT));
 
-        Map<Long, Integer> requiredQuantities = findRequiredQuantities(
+        Map<Long, Long> requiredQuantities = findRequiredQuantities(
                 page.getContent().stream().map(InventoryItem::getItemId).toList());
 
         return PageResponse.of(page,
-                item -> InventoryResponse.from(item, requiredQuantities.getOrDefault(item.getItemId(), 0)));
+                item -> InventoryResponse.from(item, requiredQuantities.getOrDefault(item.getItemId(), 0L).intValue()));
     }
 
     @Transactional
@@ -90,16 +90,11 @@ public class InventoryService {
     }
 
     // 물품별 사용 예정 수량. 사용 예정이 없는 물품은 맵에 없다.
-    private Map<Long, Integer> findRequiredQuantities(List<Long> itemIds) {
-        if (itemIds.isEmpty()) {
-            return Map.of();
-        }
-        return inventoryItemRepository.sumRequiredQuantityByItemIds(itemIds).stream()
-                .collect(Collectors.toMap(InventoryItemRepository.ItemRequiredQuantity::getItemId,
-                        required -> required.getRequiredQuantity().intValue()));
+    private Map<Long, Long> findRequiredQuantities(List<Long> itemIds) {
+        return itemIds.isEmpty() ? Map.of() : IdTotal.toMap(inventoryItemRepository.sumRequiredQuantityByItemIds(itemIds));
     }
 
     private int findRequiredQuantity(Long itemId) {
-        return findRequiredQuantities(List.of(itemId)).getOrDefault(itemId, 0);
+        return findRequiredQuantities(List.of(itemId)).getOrDefault(itemId, 0L).intValue();
     }
 }

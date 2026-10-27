@@ -1,6 +1,7 @@
 package com.mrworld.yaho.tour;
 
 import com.mrworld.yaho.booking.BookingRepository;
+import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.enums.BookingStatus;
@@ -115,9 +116,7 @@ public class TourService {
                 request.getStatus(), request.getStartDateFrom(), request.getStartDateTo(), request.toPageable(Tour.DEFAULT_SORT));
         List<Long> tourIds = page.getContent().stream().map(Tour::getTourId).toList();
         Map<Long, Long> paidGuestCounts = tourIds.isEmpty() ? Map.of()
-                : bookingRepository.sumPaidGuestCountByTourIds(tourIds).stream()
-                .collect(Collectors.toMap(BookingRepository.TourGuestCount::getTourId,
-                        BookingRepository.TourGuestCount::getGuestCount));
+                : IdTotal.toMap(bookingRepository.sumPaidGuestCountByTourIds(tourIds));
 
         return PageResponse.of(page, tour -> StaffTourSummaryResponse.builder()
                 .tourId(tour.getTourId())

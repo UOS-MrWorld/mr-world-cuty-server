@@ -1,5 +1,6 @@
 package com.mrworld.yaho.booking;
 
+import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,18 +24,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // 여러 투어의 결제 완료 인원 합을 한 번에 조회한다. 결제 완료 예약이 없는 투어는 결과에 없다.
     @Query("""
-            select b.tour.tourId as tourId, sum(b.guestCount) as guestCount from Booking b
+            select b.tour.tourId as id, sum(b.guestCount) as total from Booking b
             where b.tour.tourId in :tourIds
               and b.bookingStatus = com.mrworld.yaho.common.enums.BookingStatus.PAID
             group by b.tour.tourId
             """)
-    List<TourGuestCount> sumPaidGuestCountByTourIds(@Param("tourIds") List<Long> tourIds);
-
-    interface TourGuestCount {
-        Long getTourId();
-
-        Long getGuestCount();
-    }
+    List<IdTotal> sumPaidGuestCountByTourIds(@Param("tourIds") List<Long> tourIds);
 
     // 투어별 특정 상태 예약의 인원 합. 예약이 없으면 0을 반환한다.
     @Query("""
@@ -54,19 +49,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // 여러 고객의 완료 여행 횟수를 한 번에 센다. 완료 여행이 없는 고객은 결과에 없다.
     @Query("""
-            select b.customer.memberId as customerId, count(distinct b.tour) as tourCount from Booking b
+            select b.customer.memberId as id, count(distinct b.tour) as total from Booking b
             where b.customer.memberId in :customerIds
               and b.bookingStatus = com.mrworld.yaho.common.enums.BookingStatus.PAID
               and b.tour.tourStatus = com.mrworld.yaho.common.enums.TourStatus.COMPLETED
             group by b.customer.memberId
             """)
-    List<CustomerTourCount> countCompletedToursByCustomerIds(@Param("customerIds") List<Long> customerIds);
-
-    interface CustomerTourCount {
-        Long getCustomerId();
-
-        Long getTourCount();
-    }
+    List<IdTotal> countCompletedToursByCustomerIds(@Param("customerIds") List<Long> customerIds);
 
     // 고객의 여행 내역: 결제 완료 예약 중 투어가 모집 중·확정·완료인 것 (취소된 투어 제외)
     @EntityGraph(attributePaths = "tour")
