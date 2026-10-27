@@ -48,6 +48,11 @@ public class Customer {
                 .build();
     }
 
+    // 완료 여행 횟수로 등급을 다시 정한다. 할인 적용 여부는 직원이 등급별 일괄 적용으로 따로 켠다.
+    public void updateLoyaltyGrade(int completedTourCount) {
+        this.loyaltyGrade = LoyaltyGrade.of(completedTourCount);
+    }
+
     // 직원이 할인을 적용한 고객만 등급 할인율을 받는다.
     public int currentDiscountRate() {
         return loyaltyDiscountApplied ? loyaltyGrade.getDiscountRate() : 0;

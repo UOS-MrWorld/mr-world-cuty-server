@@ -6,6 +6,7 @@ import com.mrworld.yaho.common.enums.MealType;
 import com.mrworld.yaho.common.enums.Role;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourLevel;
+import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
@@ -404,6 +405,56 @@ class BookingControllerTest {
                 .andExpect(status().isForbidden());
         assertThat(bookingRepository.findById(othersBooking.getBookingId()).orElseThrow().getBookingStatus())
                 .isEqualTo(BookingStatus.PENDING);
+    }
+
+    @Test
+    void 여행_내역은_결제한_예약_중_취소되지_않은_투어를_최근_순으로_보여준다() throws Exception {
+        Tour completedTour = saveTourWithStatus("완료된 투어", LocalDate.now().minusDays(30), TourStatus.COMPLETED);
+        Tour cancelledTour = saveTourWithStatus("취소된 투어", LocalDate.now().plusDays(3), TourStatus.CANCELLED);
+        Booking upcoming = savePaid(golfTour, 2, 10);
+        Booking completed = savePaid(completedTour, 1, 0);
+        savePaid(cancelledTour, 1, 0);
+        bookingRepository.save(booking(1));
+        Booking othersPaid = othersBooking();
+        othersPaid.pay(0);
+        bookingRepository.save(othersPaid);
+
+        mockMvc.perform(get("/api/v1/customer/travel-history").header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].bookingId").value(upcoming.getBookingId()))
+                .andExpect(jsonPath("$.content[0].tourName").value("골프 챌린지 투어"))
+                .andExpect(jsonPath("$.content[0].startDate").value(golfTour.getStartDate().toString()))
+                .andExpect(jsonPath("$.content[0].endDate").value(golfTour.getEndDate().toString()))
+                .andExpect(jsonPath("$.content[0].tourLevel").value("CLASSIC"))
+                .andExpect(jsonPath("$.content[0].paidAmount").value(900_000))
+                .andExpect(jsonPath("$.content[0].tourStatus").value("RECRUITING"))
+                .andExpect(jsonPath("$.content[1].bookingId").value(completed.getBookingId()))
+                .andExpect(jsonPath("$.content[1].tourStatus").value("COMPLETED"));
+    }
+
+    @Test
+    void 여행_내역_페이지_값이_잘못되면_400_토큰이_없으면_401이다() throws Exception {
+        mockMvc.perform(get("/api/v1/customer/travel-history").param("size", "0").header("Authorization", bearer()))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/customer/travel-history"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // 할인 전 1,000,000원을 discountRate로 결제한 예약
+    private Booking savePaid(Tour tour, int guestCount, int discountRate) {
+        Booking booking = Booking.create(tour, customer, TourLevel.CLASSIC, guestCount,
+                HotelGrade.THREE_STAR, MealType.LUNCH_BOX, Transport.PREMIUM_VAN_10, 1_000_000, 0);
+        booking.pay(discountRate);
+        return bookingRepository.save(booking);
+    }
+
+    private Tour saveTourWithStatus(String tourName, LocalDate startDate, TourStatus tourStatus) {
+        Tour tour = Tour.create(Theme.GOLF, tourName, null, startDate, startDate.plusDays(3),
+                500000, Transport.PREMIUM_VAN_10);
+        ReflectionTestUtils.setField(tour, "tourStatus", tourStatus);
+        return tourRepository.save(tour);
     }
 
     private Booking othersBooking() {

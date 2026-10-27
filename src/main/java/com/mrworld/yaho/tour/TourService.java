@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -260,15 +261,45 @@ public class TourService {
                 .map(Tour::getTourId)
                 .toList();
 
+        processEachTour(tourIds, this::closeTour, "투어 마감 처리 실패");
+    }
+
+    // 여행 기간이 끝난 확정 투어를 완료 처리하고, 참가 고객의 단골 등급을 완료 여행 횟수로 다시 정한다.
+    // TourScheduler가 매일 호출하며, 마감 처리와 같이 투어마다 별도 트랜잭션으로 처리한다.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void completeEndedTours() {
+        List<Long> tourIds = tourRepository.findAllByTourStatusAndEndDateBefore(TourStatus.CONFIRMED, LocalDate.now())
+                .stream()
+                .map(Tour::getTourId)
+                .toList();
+
+        processEachTour(tourIds, this::completeTour, "투어 완료 처리 실패");
+    }
+
+    // 투어마다 새 트랜잭션에서 처리한다. 실패한 투어는 로그만 남기고 다음 투어로 넘어간다.
+    private void processEachTour(List<Long> tourIds, Consumer<Long> action, String failMessage) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
         transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         for (Long tourId : tourIds) {
             try {
-                transaction.executeWithoutResult(status -> closeTour(tourId));
+                transaction.executeWithoutResult(status -> action.accept(tourId));
             } catch (Exception e) {
-                log.error("투어 마감 처리 실패 tourId={}", tourId, e);
+                log.error("{} tourId={}", failMessage, tourId, e);
             }
         }
+    }
+
+    private void completeTour(Long tourId) {
+        Tour tour = tourRepository.findById(tourId).orElseThrow();
+        tour.complete();
+
+        // 완료 처리가 반영된 뒤 횟수를 세도록, 등급 계산 쿼리 전에 상태 변경을 DB에 내보낸다.
+        tourRepository.flush();
+        bookingRepository.findAllByTourIdAndBookingStatus(tourId, BookingStatus.PAID).stream()
+                .map(Booking::getCustomer)
+                .distinct()
+                .forEach(customer -> customer.updateLoyaltyGrade(
+                        bookingRepository.countCompletedToursByCustomerId(customer.getMemberId())));
     }
 
     private void closeTour(Long tourId) {

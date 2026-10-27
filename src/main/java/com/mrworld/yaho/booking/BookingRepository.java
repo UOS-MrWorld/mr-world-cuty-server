@@ -23,6 +23,25 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             """)
     int sumGuestCountByTourIdAndBookingStatus(@Param("tourId") Long tourId, @Param("status") BookingStatus status);
 
+    // 고객이 결제하고 다녀온(완료된) 투어 수. 같은 투어를 여러 건 예약했어도 한 번으로 센다.
+    @Query("""
+            select count(distinct b.tour) from Booking b
+            where b.customer.memberId = :customerId
+              and b.bookingStatus = com.mrworld.yaho.common.enums.BookingStatus.PAID
+              and b.tour.tourStatus = com.mrworld.yaho.common.enums.TourStatus.COMPLETED
+            """)
+    int countCompletedToursByCustomerId(@Param("customerId") Long customerId);
+
+    // 고객의 여행 내역: 결제 완료 예약 중 투어가 모집 중·확정·완료인 것 (취소된 투어 제외)
+    @EntityGraph(attributePaths = "tour")
+    @Query("""
+            select b from Booking b
+            where b.customer.memberId = :customerId
+              and b.bookingStatus = com.mrworld.yaho.common.enums.BookingStatus.PAID
+              and b.tour.tourStatus <> com.mrworld.yaho.common.enums.TourStatus.CANCELLED
+            """)
+    Page<Booking> findTravelHistoryByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+
     // 고객의 예약을 조회한다. status가 null이면 전체 상태를 조회한다.
     @EntityGraph(attributePaths = "tour")
     @Query("""

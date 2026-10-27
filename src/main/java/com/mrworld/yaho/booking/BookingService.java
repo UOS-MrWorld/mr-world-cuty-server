@@ -9,6 +9,9 @@ import com.mrworld.yaho.booking.dto.BookingResponse;
 import com.mrworld.yaho.booking.dto.BookingSummaryResponse;
 import com.mrworld.yaho.booking.dto.BookingUpdateRequest;
 import com.mrworld.yaho.booking.dto.BookingUpdateResponse;
+import com.mrworld.yaho.booking.dto.TravelHistoryListResponse;
+import com.mrworld.yaho.booking.dto.TravelHistoryRequest;
+import com.mrworld.yaho.booking.dto.TravelHistoryResponse;
 import com.mrworld.yaho.booking.dto.QuoteRequest;
 import com.mrworld.yaho.booking.dto.QuoteResponse;
 import com.mrworld.yaho.common.enums.BookingStatus;
@@ -99,6 +102,17 @@ public class BookingService {
 
         return BookingListResponse.builder()
                 .content(page.getContent().stream().map(BookingSummaryResponse::from).toList())
+                .totalElements(page.getTotalElements())
+                .build();
+    }
+
+    // 고객의 여행 내역(예약한 여행과 완료된 여행)을 최근 순으로 조회한다. 로그인 직후 팝업에 쓴다.
+    @Transactional(readOnly = true)
+    public TravelHistoryListResponse getTravelHistory(Long customerId, TravelHistoryRequest request) {
+        Page<Booking> page = bookingRepository.findTravelHistoryByCustomerId(customerId, request.toPageable());
+
+        return TravelHistoryListResponse.builder()
+                .content(page.getContent().stream().map(TravelHistoryResponse::from).toList())
                 .totalElements(page.getTotalElements())
                 .build();
     }

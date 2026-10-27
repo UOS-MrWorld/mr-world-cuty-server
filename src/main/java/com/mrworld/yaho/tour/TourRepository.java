@@ -22,6 +22,9 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
     // 시작일이 기준일보다 빠른 투어를 조회한다. 마감이 지났는데 아직 처리되지 않은 모집 중 투어를 찾을 때 쓴다.
     List<Tour> findAllByTourStatusAndStartDateBefore(TourStatus status, LocalDate startDate);
 
+    // 종료일이 기준일보다 빠른 투어를 조회한다. 여행이 끝났는데 아직 완료 처리되지 않은 확정 투어를 찾을 때 쓴다.
+    List<Tour> findAllByTourStatusAndEndDateBefore(TourStatus status, LocalDate endDate);
+
     // 조건이 null이면 해당 조건은 무시하고, 여러 조건은 AND로 검색한다.
     @Query("""
             select t from Tour t

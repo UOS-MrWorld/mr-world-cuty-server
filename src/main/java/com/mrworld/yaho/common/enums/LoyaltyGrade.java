@@ -13,6 +13,18 @@ public enum LoyaltyGrade {
         this.discountRate = discountRate;
     }
 
+    // 완료 여행 횟수로 받을 수 있는 가장 높은 등급
+    public static LoyaltyGrade of(int completedTourCount) {
+        LoyaltyGrade grade = NORMAL;
+        for (LoyaltyGrade candidate : values()) {
+            if (completedTourCount >= candidate.requiredTourCount
+                    && candidate.requiredTourCount >= grade.requiredTourCount) {
+                grade = candidate;
+            }
+        }
+        return grade;
+    }
+
     public int getRequiredTourCount() {
         return requiredTourCount;
     }
