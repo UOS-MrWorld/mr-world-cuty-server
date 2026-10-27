@@ -52,22 +52,20 @@ class AuthSignupRoleRowTest {
         assertThat(customerRepository.existsById(memberId)).isFalse();
     }
 
-    private long signup(String role) throws Exception {
-        String loginId = "user-" + UUID.randomUUID().toString().substring(0, 8);
+    @Test
+    void 전화번호가_숫자_10에서_11자리가_아니면_400이다() throws Exception {
+        for (String phoneNum : new String[]{"010-0000-0000", "0100000", "010000000000"}) {
+            mockMvc.perform(post("/api/v1/auth/signup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(signupBody("CUSTOMER", phoneNum)))
+                    .andExpect(status().isBadRequest());
+        }
+    }
 
+    private long signup(String role) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "테스터",
-                                  "loginId": "%s",
-                                  "password": "pw1234!",
-                                  "confirmPassword": "pw1234!",
-                                  "phoneNum": "010-0000-0000",
-                                  "address": "서울",
-                                  "role": "%s"
-                                }
-                                """.formatted(loginId, role)))
+                        .content(signupBody(role, "01000000000")))
                 .andExpect(status().isCreated())
                 .andReturn();
 
@@ -75,5 +73,20 @@ class AuthSignupRoleRowTest {
                 .matcher(result.getResponse().getContentAsString());
         assertThat(matcher.find()).isTrue();
         return Long.parseLong(matcher.group(1));
+    }
+
+    private String signupBody(String role, String phoneNum) {
+        String loginId = "user-" + UUID.randomUUID().toString().substring(0, 8);
+        return """
+                {
+                  "name": "테스터",
+                  "loginId": "%s",
+                  "password": "pw1234!",
+                  "confirmPassword": "pw1234!",
+                  "phoneNum": "%s",
+                  "address": "서울",
+                  "role": "%s"
+                }
+                """.formatted(loginId, phoneNum, role);
     }
 }
