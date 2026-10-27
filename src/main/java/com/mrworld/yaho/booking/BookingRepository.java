@@ -16,6 +16,26 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("select b from Booking b where b.tour.tourId = :tourId and b.bookingStatus = :status")
     List<Booking> findAllByTourIdAndBookingStatus(@Param("tourId") Long tourId, @Param("status") BookingStatus status);
 
+    // 투어의 모든 예약을 예약한 고객 정보와 함께 조회한다. (직원용 상세 현황)
+    @EntityGraph(attributePaths = {"customer", "customer.member"})
+    @Query("select b from Booking b where b.tour.tourId = :tourId order by b.bookingId")
+    List<Booking> findAllByTourIdWithCustomer(@Param("tourId") Long tourId);
+
+    // 여러 투어의 결제 완료 인원 합을 한 번에 조회한다. 결제 완료 예약이 없는 투어는 결과에 없다.
+    @Query("""
+            select b.tour.tourId as tourId, sum(b.guestCount) as guestCount from Booking b
+            where b.tour.tourId in :tourIds
+              and b.bookingStatus = com.mrworld.yaho.common.enums.BookingStatus.PAID
+            group by b.tour.tourId
+            """)
+    List<TourGuestCount> sumPaidGuestCountByTourIds(@Param("tourIds") List<Long> tourIds);
+
+    interface TourGuestCount {
+        Long getTourId();
+
+        Long getGuestCount();
+    }
+
     // 투어별 특정 상태 예약의 인원 합. 예약이 없으면 0을 반환한다.
     @Query("""
             select coalesce(sum(b.guestCount), 0) from Booking b

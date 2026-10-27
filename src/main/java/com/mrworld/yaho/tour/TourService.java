@@ -5,6 +5,7 @@ import com.mrworld.yaho.booking.BookingRepository;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourStatus;
+import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.inventory.InventoryItem;
 import com.mrworld.yaho.inventory.InventoryItemRepository;
@@ -12,6 +13,9 @@ import com.mrworld.yaho.inventory.InventoryService;
 import com.mrworld.yaho.notification.NotificationService;
 import com.mrworld.yaho.payment.PaymentService;
 import com.mrworld.yaho.tour.dto.DrinkOptionResponse;
+import com.mrworld.yaho.tour.dto.StaffTourListRequest;
+import com.mrworld.yaho.tour.dto.StaffTourListResponse;
+import com.mrworld.yaho.tour.dto.StaffTourSummaryResponse;
 import com.mrworld.yaho.tour.dto.TourCreateRequest;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourGiftResponse;
@@ -19,7 +23,9 @@ import com.mrworld.yaho.tour.dto.TourListRequest;
 import com.mrworld.yaho.tour.dto.TourListResponse;
 import com.mrworld.yaho.tour.dto.TourResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
+import com.mrworld.yaho.tour.dto.StaffTourDetailResponse;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
+import com.mrworld.yaho.tour.dto.TourUpdateRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchResponse;
 import lombok.RequiredArgsConstructor;
@@ -193,12 +199,91 @@ public class TourService {
         );
         gifts.forEach(gift -> tour.addGift(items.get(gift.getItemId()), gift.getQuantityPerGuest()));
 
-        Tour saved = tourRepository.save(tour);
-        return TourResponse.builder()
-                .tourId(saved.getTourId())
-                .tourStatus(saved.getTourStatus())
-                .createdAt(saved.getCreatedAt())
+        return TourResponse.from(tourRepository.save(tour));
+    }
+
+    // 직원용 상품 현황 목록. 투어마다 결제 완료 인원 합을 함께 보여준다.
+    public StaffTourListResponse getStaffTours(StaffTourListRequest request) {
+        if (request.getStartDateFrom() != null && request.getStartDateTo() != null
+                && request.getStartDateFrom().isAfter(request.getStartDateTo())) {
+            throw new IllegalArgumentException("시작일 하한은 상한보다 늦을 수 없습니다.");
+        }
+
+        Page<Tour> page = tourRepository.searchForStaff(
+                request.getStatus(), request.getStartDateFrom(), request.getStartDateTo(), request.toPageable());
+        List<Long> tourIds = page.getContent().stream().map(Tour::getTourId).toList();
+        Map<Long, Long> paidGuestCounts = tourIds.isEmpty() ? Map.of()
+                : bookingRepository.sumPaidGuestCountByTourIds(tourIds).stream()
+                .collect(Collectors.toMap(BookingRepository.TourGuestCount::getTourId,
+                        BookingRepository.TourGuestCount::getGuestCount));
+
+        return StaffTourListResponse.builder()
+                .content(page.getContent().stream()
+                        .map(tour -> StaffTourSummaryResponse.builder()
+                                .tourId(tour.getTourId())
+                                .tourName(tour.getTourName())
+                                .theme(tour.getTheme())
+                                .startDate(tour.getStartDate())
+                                .tourStatus(tour.getTourStatus())
+                                .paidGuestCount(paidGuestCounts.getOrDefault(tour.getTourId(), 0L).intValue())
+                                .build())
+                        .toList())
+                .totalElements(page.getTotalElements())
                 .build();
+    }
+
+    // 직원용 상품 상세 현황: 투어 정보, 결제 완료 인원, 모든 예약 현황, 기념품 구성과 현재 재고
+    public StaffTourDetailResponse getStaffTourDetail(Long tourId) {
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
+
+        return StaffTourDetailResponse.builder()
+                .tour(StaffTourDetailResponse.TourInfo.from(tour))
+                .paidGuestCount(bookingRepository.sumGuestCountByTourIdAndBookingStatus(tourId, BookingStatus.PAID))
+                .bookings(bookingRepository.findAllByTourIdWithCustomer(tourId).stream()
+                        .map(StaffTourDetailResponse.BookingInfo::from)
+                        .toList())
+                .gifts(tour.getTourGifts().stream().map(StaffTourDetailResponse.GiftInfo::from).toList())
+                .build();
+    }
+
+    // 모집 중인 상품만 수정할 수 있다. 보내지 않은 값은 그대로 두고, gifts를 보내면 기념품 구성 전체를 교체한다.
+    @Transactional
+    public TourResponse updateTour(Long tourId, TourUpdateRequest request) {
+        if (request.hasNoUpdate()) {
+            throw new IllegalArgumentException("수정할 값이 없습니다.");
+        }
+
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
+        if (tour.getTourStatus() != TourStatus.RECRUITING) {
+            throw new ConflictException("모집 중인 상품만 수정할 수 있습니다.");
+        }
+
+        LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : tour.getStartDate();
+        LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : tour.getEndDate();
+        if (endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
+        }
+
+        Map<Long, InventoryItem> items = request.getGifts() == null ? Map.of() : findGiftItems(request.getGifts());
+        tour.update(
+                request.getTourName() == null ? null : request.getTourName().trim(),
+                request.getDescription(),
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getBasePrice(),
+                request.getDefaultTransport()
+        );
+        if (request.getGifts() != null) {
+            tour.clearGifts();
+            // 기존 구성 삭제가 먼저 반영되도록 내보낸 뒤 새 구성을 추가한다.
+            tourRepository.flush();
+            request.getGifts().forEach(gift ->
+                    tour.addGift(items.get(gift.getItemId()), gift.getQuantityPerGuest()));
+        }
+
+        return TourResponse.from(tour);
     }
 
     // 같은 기념품을 두 번 넣거나 없는 재고를 지정하면 등록하지 않는다.

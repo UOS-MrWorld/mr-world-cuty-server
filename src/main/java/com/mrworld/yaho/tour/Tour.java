@@ -124,4 +124,19 @@ public class Tour {
     public void complete() {
         this.tourStatus = TourStatus.COMPLETED;
     }
+
+    // 직원의 상품 수정. null인 값은 기존 값을 유지한다.
+    public void update(String tourName, String description, LocalDate startDate, LocalDate endDate,
+                       Integer price, Transport defaultTransport) {
+        if (tourName != null) this.tourName = tourName;
+        if (description != null) this.description = description;
+        if (startDate != null) this.startDate = startDate;
+        if (endDate != null) this.endDate = endDate;
+        if (price != null) this.price = price;
+        if (defaultTransport != null) this.defaultTransport = defaultTransport;
+    }
+
+    public void clearGifts() {
+        tourGifts.clear();
+    }
 }
