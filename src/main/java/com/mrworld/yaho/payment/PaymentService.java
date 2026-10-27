@@ -35,7 +35,7 @@ public class PaymentService {
         if (!booking.isOwnedBy(customerId)) {
             throw new ForbiddenException("본인의 예약이 아닙니다.");
         }
-        if (paymentRepository.existsByBookingIdAndPaymentStatus(booking.getBookingId(), PaymentStatus.SUCCESS)) {
+        if (paymentRepository.existsByBookingBookingIdAndPaymentStatus(booking.getBookingId(), PaymentStatus.SUCCESS)) {
             throw new ConflictException("이미 결제가 완료된 예약입니다.");
         }
         if (booking.getBookingStatus() != BookingStatus.PENDING) {
@@ -60,7 +60,7 @@ public class PaymentService {
     // 예약의 성공 결제를 환불한다. 고객의 예약 취소와 인원 미달로 인한 투어 취소에서 함께 쓴다.
     @Transactional
     public void refund(Booking booking) {
-        Payment payment = paymentRepository.findByBookingIdAndPaymentStatus(booking.getBookingId(), PaymentStatus.SUCCESS)
+        Payment payment = paymentRepository.findByBookingBookingIdAndPaymentStatus(booking.getBookingId(), PaymentStatus.SUCCESS)
                 .orElseThrow(() -> new IllegalStateException("환불할 결제가 없습니다."));
         payment.refund();
     }

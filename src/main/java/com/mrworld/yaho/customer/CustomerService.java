@@ -1,6 +1,7 @@
 package com.mrworld.yaho.customer;
 
 import com.mrworld.yaho.booking.BookingRepository;
+import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.enums.LoyaltyGrade;
 import com.mrworld.yaho.common.exception.NotFoundException;
@@ -18,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 // 직원용 고객 조회, 단골 할인 일괄 적용, 단골 등급 기준 조회
 @Service
@@ -44,9 +44,7 @@ public class CustomerService {
 
         List<Long> customerIds = page.getContent().stream().map(Customer::getMemberId).toList();
         Map<Long, Long> tourCounts = customerIds.isEmpty() ? Map.of()
-                : bookingRepository.countCompletedToursByCustomerIds(customerIds).stream()
-                .collect(Collectors.toMap(BookingRepository.CustomerTourCount::getCustomerId,
-                        BookingRepository.CustomerTourCount::getTourCount));
+                : IdTotal.toMap(bookingRepository.countCompletedToursByCustomerIds(customerIds));
 
         return PageResponse.of(page, customer -> CustomerSummaryResponse.from(
                 customer, tourCounts.getOrDefault(customer.getMemberId(), 0L)));
