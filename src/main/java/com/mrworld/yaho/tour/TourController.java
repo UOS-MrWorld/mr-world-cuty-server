@@ -59,21 +59,6 @@ public class TourController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<PageResponse<TourSummaryResponse>> getTours(@ParameterObject @Valid PagingRequest request) {
@@ -89,21 +74,6 @@ public class TourController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<PageResponse<TourSummaryResponse>> searchTours(@ParameterObject @Valid TourSearchRequest request) {
@@ -114,25 +84,10 @@ public class TourController {
     @Operation(summary = "여행 상품 상세 조회", description = "투어 정보와 선택 가능한 투어 등급을 반환합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 투어",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<TourDetailResponse> getTourDetail(@PathVariable Long tourId) {
@@ -148,21 +103,6 @@ public class TourController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<VoiceSearchResponse> voiceSearch(@RequestBody @Valid VoiceSearchRequest request) {
@@ -179,16 +119,6 @@ public class TourController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 투어",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
@@ -198,11 +128,6 @@ public class TourController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.CONFLICT)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<QuoteResponse> getQuote(
@@ -224,25 +149,10 @@ public class TourController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "404", description = "지정한 기념품 재고가 존재하지 않음",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<TourResponse> createTour(@RequestBody @Valid TourCreateRequest request) {
@@ -258,21 +168,6 @@ public class TourController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<PageResponse<StaffTourSummaryResponse>> getStaffTours(@ParameterObject @Valid StaffTourListRequest request) {
@@ -284,25 +179,10 @@ public class TourController {
             description = "직원이 투어 상세, 결제 완료 인원, 예약 현황, 기념품 구성과 현재 재고를 조회합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 투어",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<StaffTourDetailResponse> getStaffTourDetail(@PathVariable Long tourId) {
@@ -319,16 +199,6 @@ public class TourController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 투어 또는 기념품 재고",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
@@ -338,11 +208,6 @@ public class TourController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.CONFLICT)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<TourResponse> updateTour(

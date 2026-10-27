@@ -39,11 +39,6 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.LOGIN_ID_DUPLICATED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
@@ -64,11 +59,6 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.INVALID_CREDENTIALS)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
@@ -89,11 +79,6 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.INVALID_REFRESH_TOKEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<TokenResponse> refresh(@RequestBody @Valid RefreshTokenRequest request) {
@@ -114,11 +99,6 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<Void> logout(

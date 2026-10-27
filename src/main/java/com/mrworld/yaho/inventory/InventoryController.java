@@ -43,21 +43,6 @@ public class InventoryController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<PageResponse<InventoryResponse>> getItems(@ParameterObject @Valid InventoryListRequest request) {
@@ -73,25 +58,10 @@ public class InventoryController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "409", description = "같은 물품명이 이미 존재",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.CONFLICT)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<InventoryResponse> registerItem(@RequestBody @Valid InventoryRegisterRequest request) {
@@ -107,16 +77,6 @@ public class InventoryController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "직원 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "404", description = "재고 물품 없음",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
@@ -126,11 +86,6 @@ public class InventoryController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.CONFLICT)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<InventoryResponse> updateItem(

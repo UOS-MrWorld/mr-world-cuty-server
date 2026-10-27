@@ -34,17 +34,7 @@ public class MemberController {
     @GetMapping("/me")
     @Operation(summary = "내 회원정보 조회", description = "로그인 사용자의 공통 회원정보를 조회합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
-                    ))
+            @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true)
     })
     public ResponseEntity<MemberInfoResponse> getMyInfo(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(memberService.getMyInfo(Long.valueOf(userDetails.getUsername())));
@@ -58,16 +48,6 @@ public class MemberController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<MemberUpdateResponse> updateMyInfo(

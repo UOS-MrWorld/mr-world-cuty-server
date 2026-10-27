@@ -42,11 +42,6 @@ public class PaymentController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
             @ApiResponse(responseCode = "403", description = "고객 권한이 아니거나 본인 예약이 아님",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
@@ -61,11 +56,6 @@ public class PaymentController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.CONFLICT)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<PaymentResponse> pay(
