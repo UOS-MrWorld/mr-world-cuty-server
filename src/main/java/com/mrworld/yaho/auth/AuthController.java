@@ -82,7 +82,7 @@ public class AuthController {
                     ))
     })
     public ResponseEntity<TokenResponse> refresh(@RequestBody @Valid RefreshTokenRequest request) {
-        TokenResponse response = authService.refresh(request.refreshToken());
+        TokenResponse response = authService.refresh(request.getRefreshToken());
         return ResponseEntity.ok(response);
     }
 
@@ -105,7 +105,7 @@ public class AuthController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid RefreshTokenRequest request
     ) {
-        authService.logout(Long.valueOf(userDetails.getUsername()), request.refreshToken());
+        authService.logout(Long.valueOf(userDetails.getUsername()), request.getRefreshToken());
         return ResponseEntity.noContent().build();
     }
 }

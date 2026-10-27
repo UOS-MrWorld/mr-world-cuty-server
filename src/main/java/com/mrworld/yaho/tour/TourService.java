@@ -16,7 +16,6 @@ import com.mrworld.yaho.tour.dto.StaffTourListRequest;
 import com.mrworld.yaho.tour.dto.StaffTourSummaryResponse;
 import com.mrworld.yaho.tour.dto.TourCreateRequest;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
-import com.mrworld.yaho.tour.dto.TourGiftResponse;
 import com.mrworld.yaho.tour.dto.TourResponse;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import com.mrworld.yaho.tour.dto.TourUpdateRequest;
@@ -53,32 +52,10 @@ public class TourService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
 
-        return TourDetailResponse.builder()
-                .tourId(tour.getTourId())
-                .theme(tour.getTheme())
-                .tourName(tour.getTourName())
-                .description(tour.getDescription())
-                .startDate(tour.getStartDate())
-                .endDate(tour.getEndDate())
-                .basePrice(tour.getPrice())
-                .defaultTransport(tour.getDefaultTransport())
-                .tourStatus(tour.getTourStatus())
-                .availableTourLevels(tour.availableLevels())
-                .drinkOptions(drinkOptionRepository.findAll(Sort.by("optionId")).stream()
-                        .map(drinkOption -> DrinkOptionResponse.builder()
-                                .optionId(drinkOption.getOptionId())
-                                .drinkName(drinkOption.getDrinkName())
-                                .drinkPrice(drinkOption.getDrinkPrice())
-                                .build())
-                        .toList())
-                .gifts(tour.getTourGifts().stream()
-                        .map(gift -> TourGiftResponse.builder()
-                                .itemId(gift.getInventoryItem().getItemId())
-                                .itemName(gift.getInventoryItem().getItemName())
-                                .quantityPerGuest(gift.getQuantityPerGuest())
-                                .build())
-                        .toList())
-                .build();
+        List<DrinkOptionResponse> drinkOptions = drinkOptionRepository.findAll(Sort.by("optionId")).stream()
+                .map(DrinkOptionResponse::from)
+                .toList();
+        return TourDetailResponse.from(tour, drinkOptions);
     }
 
     // 직원이 등록한 상품은 모집 중 상태로 시작하고, 기념품 구성(TourGift)도 함께 저장한다.
@@ -118,14 +95,8 @@ public class TourService {
         Map<Long, Long> paidGuestCounts = tourIds.isEmpty() ? Map.of()
                 : IdTotal.toMap(bookingRepository.sumPaidGuestCountByTourIds(tourIds));
 
-        return PageResponse.of(page, tour -> StaffTourSummaryResponse.builder()
-                .tourId(tour.getTourId())
-                .tourName(tour.getTourName())
-                .theme(tour.getTheme())
-                .startDate(tour.getStartDate())
-                .tourStatus(tour.getTourStatus())
-                .paidGuestCount(paidGuestCounts.getOrDefault(tour.getTourId(), 0L).intValue())
-                .build());
+        return PageResponse.of(page, tour -> StaffTourSummaryResponse.from(
+                tour, paidGuestCounts.getOrDefault(tour.getTourId(), 0L).intValue()));
     }
 
     // 직원용 상품 상세 현황: 투어 정보, 결제 완료 인원, 모든 예약 현황, 기념품 구성과 현재 재고

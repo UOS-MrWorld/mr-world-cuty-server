@@ -1,5 +1,6 @@
 package com.mrworld.yaho.tour.dto;
 
+import com.mrworld.yaho.tour.DrinkOption;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -7,7 +8,15 @@ import lombok.Getter;
 @Getter
 @Builder
 public class DrinkOptionResponse {
-    private long optionId;
+    private Long optionId;
     private String drinkName;
     private int drinkPrice;
+
+    public static DrinkOptionResponse from(DrinkOption drinkOption) {
+        return DrinkOptionResponse.builder()
+                .optionId(drinkOption.getOptionId())
+                .drinkName(drinkOption.getDrinkName())
+                .drinkPrice(drinkOption.getDrinkPrice())
+                .build();
+    }
 }

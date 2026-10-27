@@ -1,5 +1,6 @@
 package com.mrworld.yaho.tour.dto;
 
+import com.mrworld.yaho.tour.TourGift;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -10,4 +11,12 @@ public class TourGiftResponse {
     private Long itemId;
     private String itemName;
     private int quantityPerGuest;
+
+    public static TourGiftResponse from(TourGift tourGift) {
+        return TourGiftResponse.builder()
+                .itemId(tourGift.getInventoryItem().getItemId())
+                .itemName(tourGift.getInventoryItem().getItemName())
+                .quantityPerGuest(tourGift.getQuantityPerGuest())
+                .build();
+    }
 }
