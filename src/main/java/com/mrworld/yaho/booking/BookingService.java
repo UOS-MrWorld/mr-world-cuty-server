@@ -1,7 +1,13 @@
 package com.mrworld.yaho.booking;
 
+import com.mrworld.yaho.booking.dto.BookingDetailResponse;
+import com.mrworld.yaho.booking.dto.BookingListRequest;
+import com.mrworld.yaho.booking.dto.BookingListResponse;
 import com.mrworld.yaho.booking.dto.BookingRequest;
 import com.mrworld.yaho.booking.dto.BookingResponse;
+import com.mrworld.yaho.booking.dto.BookingSummaryResponse;
+import com.mrworld.yaho.booking.dto.BookingUpdateRequest;
+import com.mrworld.yaho.booking.dto.BookingUpdateResponse;
 import com.mrworld.yaho.booking.dto.QuoteRequest;
 import com.mrworld.yaho.booking.dto.QuoteResponse;
 import com.mrworld.yaho.common.enums.BookingStatus;
@@ -9,6 +15,7 @@ import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.common.exception.ConflictException;
+import com.mrworld.yaho.common.exception.ForbiddenException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
@@ -18,6 +25,7 @@ import com.mrworld.yaho.tour.DrinkOptionRepository;
 import com.mrworld.yaho.tour.Tour;
 import com.mrworld.yaho.tour.TourRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +87,64 @@ public class BookingService {
         return BookingResponse.from(bookingRepository.save(booking));
     }
 
+    // 로그인 고객의 예약을 상태별로 최근 순 조회한다.
+    @Transactional(readOnly = true)
+    public BookingListResponse getBookings(Long customerId, BookingListRequest request) {
+        Page<Booking> page = bookingRepository.findMyBookings(customerId, request.getStatus(), request.toPageable());
+
+        return BookingListResponse.builder()
+                .content(page.getContent().stream().map(BookingSummaryResponse::from).toList())
+                .totalElements(page.getTotalElements())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public BookingDetailResponse getBookingDetail(Long customerId, Long bookingId) {
+        return BookingDetailResponse.from(findMyBooking(customerId, bookingId));
+    }
+
+    // 결제 전(PENDING) 예약의 옵션을 바꾼다. 보내지 않은 옵션은 기존 값을 유지하고 금액은 다시 계산한다.
+    @Transactional
+    public BookingUpdateResponse updateBookingOptions(Long customerId, Long bookingId, BookingUpdateRequest request) {
+        if (request.hasNoUpdate()) {
+            throw new IllegalArgumentException("수정할 값이 없습니다.");
+        }
+
+        Booking booking = findMyBooking(customerId, bookingId);
+        if (booking.getBookingStatus() != BookingStatus.PENDING) {
+            throw new ConflictException("결제 전 예약만 수정할 수 있습니다.");
+        }
+
+        Tour tour = findBookableTour(booking.getTour().getTourId());
+        QuoteRequest merged = mergeOptions(booking, request);
+        validateBookingOptions(tour, merged);
+
+        // 인원을 바꾸면 예약 생성과 같은 기준으로 기념품 재고를 다시 확인한다.
+        if (request.getGuestCount() != null) {
+            int paidGuestCount = bookingRepository.sumGuestCountByTourIdAndBookingStatus(
+                    tour.getTourId(), BookingStatus.PAID);
+            inventoryService.validateStock(tour, paidGuestCount + merged.getGuestCount());
+        }
+
+        Map<Long, DrinkOption> drinkOptions = findDrinkOptions(merged.getDrinkOptions());
+        booking.updateOptions(
+                merged.getTourLevel(),
+                merged.getGuestCount(),
+                merged.getHotelGrade(),
+                merged.getMealType(),
+                merged.getTransport(),
+                calculateTotalPrice(tour, merged, drinkOptions)
+        );
+        if (request.getDrinkOptions() != null) {
+            booking.clearDrinkOptions();
+            for (QuoteRequest.DrinkOptionItem item : request.getDrinkOptions()) {
+                booking.addDrinkOption(drinkOptions.get(item.getOptionId()), item.getQuantity());
+            }
+        }
+
+        return BookingUpdateResponse.from(booking);
+    }
+
     // 예약을 만들지 않고 선택한 옵션의 예상 금액과 단골 할인 적용 금액만 계산한다.
     @Transactional(readOnly = true)
     public QuoteResponse getQuote(Long tourId, Long customerId, QuoteRequest request) {
@@ -101,7 +167,37 @@ public class BookingService {
                 .build();
     }
 
-    // 모집 중이고 예약 마감(시작 7일 전) 전인 투어만 예약·가격 계산할 수 있다.
+    private Booking findMyBooking(Long customerId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 예약입니다."));
+        if (!booking.isOwnedBy(customerId)) {
+            throw new ForbiddenException("본인의 예약이 아닙니다.");
+        }
+        return booking;
+    }
+
+    // 수정 요청에 없는 옵션은 기존 예약 값으로 채워, 생성·가격 계산과 같은 검증과 계산을 쓴다.
+    private QuoteRequest mergeOptions(Booking booking, BookingUpdateRequest request) {
+        QuoteRequest merged = new QuoteRequest();
+        merged.setTourLevel(request.getTourLevel() != null ? request.getTourLevel() : booking.getTourLevel());
+        merged.setGuestCount(request.getGuestCount() != null ? request.getGuestCount() : booking.getGuestCount());
+        merged.setHotelGrade(request.getHotelGrade() != null ? request.getHotelGrade() : booking.getHotelGrade());
+        merged.setMealType(request.getMealType() != null ? request.getMealType() : booking.getMealType());
+        merged.setTransport(request.getTransport() != null ? request.getTransport() : booking.getTransport());
+        merged.setDrinkOptions(request.getDrinkOptions() != null
+                ? request.getDrinkOptions()
+                : booking.getBookingDrinkOptions().stream().map(BookingService::toDrinkOptionItem).toList());
+        return merged;
+    }
+
+    private static QuoteRequest.DrinkOptionItem toDrinkOptionItem(BookingDrinkOption bookingDrinkOption) {
+        QuoteRequest.DrinkOptionItem item = new QuoteRequest.DrinkOptionItem();
+        item.setOptionId(bookingDrinkOption.getDrinkOption().getOptionId());
+        item.setQuantity(bookingDrinkOption.getQuantity());
+        return item;
+    }
+
+    // 모집 중이고 예약 마감(시작 7일 전) 전인 투어만 예약·수정·가격 계산할 수 있다.
     private Tour findBookableTour(Long tourId) {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
