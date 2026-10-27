@@ -30,7 +30,8 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.mrworld.yaho.security.LoginMemberId;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -131,9 +132,10 @@ public class TourController {
     })
     public ResponseEntity<QuoteResponse> getQuote(
             @PathVariable Long tourId,
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid QuoteRequest request
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getQuote(tourId, customerId, request));
     }
 

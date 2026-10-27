@@ -15,7 +15,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.mrworld.yaho.security.LoginMemberId;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -58,9 +59,10 @@ public class PaymentController {
                     ))
     })
     public ResponseEntity<PaymentResponse> pay(
-            @LoginMemberId Long customerId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid PaymentRequest request
     ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.pay(customerId, request));
     }
 }

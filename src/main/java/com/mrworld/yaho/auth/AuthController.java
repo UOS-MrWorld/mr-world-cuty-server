@@ -14,7 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.mrworld.yaho.security.LoginMemberId;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 // 회원가입 / 로그인 / 토큰 재발급 / 로그아웃
@@ -101,10 +102,10 @@ public class AuthController {
                     ))
     })
     public ResponseEntity<Void> logout(
-            @LoginMemberId Long memberId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid RefreshTokenRequest request
     ) {
-        authService.logout(memberId, request.refreshToken());
+        authService.logout(Long.valueOf(userDetails.getUsername()), request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 }
