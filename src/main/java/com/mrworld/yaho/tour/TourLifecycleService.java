@@ -76,7 +76,9 @@ public class TourLifecycleService {
         }
     }
 
-    private void completeTour(Long tourId) {
+    // 데모 API(DemoService)에서도 호출하므로 public으로 연다.
+    @Transactional
+    public void completeTour(Long tourId) {
         Tour tour = tourRepository.findById(tourId).orElseThrow();
         tour.complete();
 
@@ -89,7 +91,9 @@ public class TourLifecycleService {
                         bookingRepository.countCompletedToursByCustomerId(customer.getMemberId())));
     }
 
-    private void closeTour(Long tourId) {
+    // 데모 API(DemoService)에서도 호출하므로 public으로 연다.
+    @Transactional
+    public void closeTour(Long tourId) {
         Tour tour = tourRepository.findById(tourId).orElseThrow();
         List<Booking> paidBookings = bookingRepository.findAllByTourIdAndBookingStatus(tourId, BookingStatus.PAID);
         int paidGuestCount = paidBookings.stream().mapToInt(Booking::getGuestCount).sum();
