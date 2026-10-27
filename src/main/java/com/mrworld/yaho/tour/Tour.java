@@ -119,4 +119,9 @@ public class Tour {
     public void cancel() {
         this.tourStatus = TourStatus.CANCELLED;
     }
+
+    // 확정된 투어의 여행 기간이 끝나면 완료 처리한다.
+    public void complete() {
+        this.tourStatus = TourStatus.COMPLETED;
+    }
 }

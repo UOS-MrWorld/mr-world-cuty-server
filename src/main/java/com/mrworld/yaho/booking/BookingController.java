@@ -8,6 +8,8 @@ import com.mrworld.yaho.booking.dto.BookingRequest;
 import com.mrworld.yaho.booking.dto.BookingResponse;
 import com.mrworld.yaho.booking.dto.BookingUpdateRequest;
 import com.mrworld.yaho.booking.dto.BookingUpdateResponse;
+import com.mrworld.yaho.booking.dto.TravelHistoryListResponse;
+import com.mrworld.yaho.booking.dto.TravelHistoryRequest;
 import com.mrworld.yaho.common.dto.ResultDto;
 import com.mrworld.yaho.config.SwaggerExamples;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,15 +35,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 // 고객 예약 API. 예약 생성(createBooking), 목록/상세 조회(getBookings, getBookingDetail),
-// 결제 전 옵션 수정(updateBookingOptions), 예약 취소(cancelBooking)를 제공하며, 여행 내역 조회는 추가 예정이다.
+// 결제 전 옵션 수정(updateBookingOptions), 예약 취소(cancelBooking),
+// 여행 내역 조회(getTravelHistory, /api/v1/customer/travel-history)를 제공한다.
 @RestController
-@RequestMapping("/api/v1/customer/bookings")
+@RequestMapping("/api/v1/customer")
 @RequiredArgsConstructor
 @Tag(name = "Booking", description = "여행 예약 API")
 public class BookingController {
     private final BookingService bookingService;
 
-    @PostMapping
+    @PostMapping("/bookings")
     @Operation(summary = "여행 상품 예약 생성",
             description = "GUI 또는 음성으로 선택한 옵션을 저장하고 결제 전(PENDING) 예약을 생성합니다. 결제는 수행하지 않습니다.")
     @ApiResponses({
@@ -85,7 +88,7 @@ public class BookingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createBooking(customerId, request));
     }
 
-    @GetMapping
+    @GetMapping("/bookings")
     @Operation(summary = "내 예약 목록 조회", description = "로그인 고객의 예약 목록을 상태별로 최근 순 조회합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
@@ -118,7 +121,7 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookings(customerId, request));
     }
 
-    @GetMapping("/{bookingId}")
+    @GetMapping("/bookings/{bookingId}")
     @Operation(summary = "예약 상세 조회", description = "본인의 예약 상세, 최종 옵션, 결제 및 투어 상태를 조회합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
@@ -151,7 +154,7 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookingDetail(customerId, bookingId));
     }
 
-    @PatchMapping("/{bookingId}")
+    @PatchMapping("/bookings/{bookingId}")
     @Operation(summary = "PENDING 예약 수정",
             description = "결제 전 예약의 투어 등급, 인원, 호텔, 식사, 교통, 추가 음료 옵션을 수정하고 금액을 다시 계산합니다.")
     @ApiResponses({
@@ -196,7 +199,7 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.updateBookingOptions(customerId, bookingId, request));
     }
 
-    @PatchMapping("/{bookingId}/cancel")
+    @PatchMapping("/bookings/{bookingId}/cancel")
     @Operation(summary = "여행 예약 취소",
             description = "투어 시작 7일 전까지 본인 예약을 취소합니다. 결제 완료 예약이면 결제를 환불(REFUNDED) 처리합니다.")
     @ApiResponses({
@@ -233,5 +236,40 @@ public class BookingController {
     ) {
         Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.cancelBooking(customerId, bookingId));
+    }
+
+    @GetMapping("/travel-history")
+    @Operation(summary = "여행 내역 조회",
+            description = "결제 완료 예약 중 예약한 여행(RECRUITING·CONFIRMED)과 완료된 여행(COMPLETED)을 최근 순으로 조회합니다. "
+                    + "고객 로그인 직후 팝업 표시에 사용합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            @ApiResponse(responseCode = "400", description = "페이지 값 오류",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
+                    )),
+            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
+                    )),
+            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
+                    )),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
+                    ))
+    })
+    public ResponseEntity<TravelHistoryListResponse> getTravelHistory(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @ParameterObject @Valid TravelHistoryRequest request
+    ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
+        return ResponseEntity.ok(bookingService.getTravelHistory(customerId, request));
     }
 }
