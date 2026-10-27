@@ -32,6 +32,8 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -176,6 +178,175 @@ class BookingControllerTest {
                         .header("Authorization", bearer())
                         .contentType(MediaType.APPLICATION_JSON).content(body(999999L, 2)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void 내_예약만_최근_순으로_조회하고_상태로_거른다() throws Exception {
+        Booking first = bookingRepository.save(booking(1));
+        savePaidBooking(2);
+        bookingRepository.save(othersBooking());
+
+        mockMvc.perform(get(URL).header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].bookingStatus").value("PAID"))
+                .andExpect(jsonPath("$.content[1].bookingId").value(first.getBookingId()))
+                .andExpect(jsonPath("$.content[1].tourId").value(golfTour.getTourId()))
+                .andExpect(jsonPath("$.content[1].tourName").value("골프 챌린지 투어"))
+                .andExpect(jsonPath("$.content[1].startDate").value(golfTour.getStartDate().toString()));
+
+        mockMvc.perform(get(URL).param("status", "PENDING").header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].bookingStatus").value("PENDING"));
+    }
+
+    @Test
+    void 목록_조회의_상태나_페이지_값이_잘못되면_400이다() throws Exception {
+        mockMvc.perform(get(URL).param("status", "DONE").header("Authorization", bearer()))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get(URL).param("page", "-1").header("Authorization", bearer()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 예약_상세를_조회한다() throws Exception {
+        Booking booking = booking(2);
+        booking.addDrinkOption(coffee, 3);
+        booking = bookingRepository.save(booking);
+
+        mockMvc.perform(get(URL + "/" + booking.getBookingId()).header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value(booking.getBookingId()))
+                .andExpect(jsonPath("$.tour.tourId").value(golfTour.getTourId()))
+                .andExpect(jsonPath("$.tour.theme").value("GOLF"))
+                .andExpect(jsonPath("$.tour.tourStatus").value("RECRUITING"))
+                .andExpect(jsonPath("$.tourLevel").value("CLASSIC"))
+                .andExpect(jsonPath("$.guestCount").value(2))
+                .andExpect(jsonPath("$.drinkOptions[0].drinkName").value("COFFEE"))
+                .andExpect(jsonPath("$.drinkOptions[0].quantity").value(3))
+                .andExpect(jsonPath("$.drinkOptions[0].price").value(5000))
+                .andExpect(jsonPath("$.bookingStatus").value("PENDING"))
+                .andExpect(jsonPath("$.paymentStatus").doesNotExist());
+    }
+
+    @Test
+    void 다른_고객의_예약은_403_없는_예약은_404이다() throws Exception {
+        Booking othersBooking = bookingRepository.save(othersBooking());
+
+        mockMvc.perform(get(URL + "/" + othersBooking.getBookingId()).header("Authorization", bearer()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(403));
+
+        mockMvc.perform(patch(URL + "/" + othersBooking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"guestCount\": 2}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get(URL + "/999999").header("Authorization", bearer()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void 보낸_옵션만_바꾸고_금액을_다시_계산한다() throws Exception {
+        Booking booking = booking(2);
+        booking.addDrinkOption(coffee, 1);
+        booking = bookingRepository.save(booking);
+
+        // (500,000 + 호텔 4성 100,000 + 밴 50,000) * 3명 + 커피 5,000 * 1
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"guestCount\": 3, \"hotelGrade\": \"FOUR_STAR\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingStatus").value("PENDING"))
+                .andExpect(jsonPath("$.tourLevel").value("CLASSIC"))
+                .andExpect(jsonPath("$.guestCount").value(3))
+                .andExpect(jsonPath("$.hotelGrade").value("FOUR_STAR"))
+                .andExpect(jsonPath("$.mealType").value("LUNCH_BOX"))
+                .andExpect(jsonPath("$.totalPrice").value(1_955_000))
+                .andExpect(jsonPath("$.expectedPaymentAmount").value(1_955_000));
+    }
+
+    @Test
+    void 음료를_보내면_기존_음료_구성을_교체한다() throws Exception {
+        Booking booking = booking(2);
+        booking.addDrinkOption(coffee, 1);
+        booking = bookingRepository.save(booking);
+        DrinkOption wine = drinkOptionRepository.save(DrinkOption.create("WINE", 30000));
+
+        // (500,000 + 밴 50,000) * 2명 + 와인 30,000 * 2
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"drinkOptions\": [{\"optionId\": %d, \"quantity\": 2}]}"
+                                .formatted(wine.getOptionId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalPrice").value(1_160_000));
+
+        mockMvc.perform(get(URL + "/" + booking.getBookingId()).header("Authorization", bearer()))
+                .andExpect(jsonPath("$.drinkOptions.length()").value(1))
+                .andExpect(jsonPath("$.drinkOptions[0].drinkName").value("WINE"));
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"drinkOptions\": []}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalPrice").value(1_100_000));
+    }
+
+    @Test
+    void 변경할_값이_없거나_규칙에_맞지_않으면_400이다() throws Exception {
+        Booking booking = bookingRepository.save(booking(2));
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+
+        // 3명 이상은 2인 차량을 선택할 수 없다.
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"guestCount\": 3, \"transport\": \"PREMIUM_CAR_2\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 결제_완료된_예약은_수정할_수_없다() throws Exception {
+        Booking booking = booking(2);
+        ReflectionTestUtils.setField(booking, "bookingStatus", BookingStatus.PAID);
+        booking = bookingRepository.save(booking);
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"guestCount\": 1}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void 인원을_늘려_기념품_재고가_부족하면_409이다() throws Exception {
+        savePaidBooking(3);
+        Booking booking = bookingRepository.save(booking(1));
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"guestCount\": 3}"))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId())
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"guestCount\": 2}"))
+                .andExpect(status().isOk());
+    }
+
+    private Booking othersBooking() {
+        Member member = memberRepository.save(Member.create(
+                "other-" + UUID.randomUUID(), "pw", "다른고객", "010-1111-1111", "부산", Role.CUSTOMER));
+        Customer other = customerRepository.save(Customer.create(member));
+        return Booking.create(golfTour, other, TourLevel.CLASSIC, 1,
+                HotelGrade.THREE_STAR, MealType.LUNCH_BOX, Transport.PREMIUM_VAN_10, 0, 0);
     }
 
     private void savePaidBooking(int guestCount) {

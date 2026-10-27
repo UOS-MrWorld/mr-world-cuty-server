@@ -37,6 +37,11 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ResultDto> handleForbidden(ForbiddenException e) {
+        return response(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ResultDto> handleNotFound(NotFoundException e) {
         return response(HttpStatus.NOT_FOUND, e.getMessage());

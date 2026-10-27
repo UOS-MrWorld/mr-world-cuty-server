@@ -116,6 +116,31 @@ public class Booking {
         bookingDrinkOptions.add(BookingDrinkOption.create(this, drinkOption, quantity));
     }
 
+    // 결제 전(PENDING) 예약의 옵션과 다시 계산한 금액을 바꾼다. 할인율은 예약 생성 시점 값을 유지한다.
+    public void updateOptions(
+            TourLevel tourLevel,
+            int guestCount,
+            HotelGrade hotelGrade,
+            MealType mealType,
+            Transport transport,
+            int totalPrice
+    ) {
+        this.tourLevel = tourLevel;
+        this.guestCount = guestCount;
+        this.hotelGrade = hotelGrade;
+        this.mealType = mealType;
+        this.transport = transport;
+        this.totalPrice = totalPrice;
+    }
+
+    public void clearDrinkOptions() {
+        bookingDrinkOptions.clear();
+    }
+
+    public boolean isOwnedBy(Long customerId) {
+        return customer.getMemberId().equals(customerId);
+    }
+
     // 결제 금액 = totalPrice × (100 - discountRate) / 100
     public int expectedPaymentAmount() {
         return totalPrice * (100 - discountRate) / 100;
