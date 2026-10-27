@@ -70,7 +70,7 @@ public class Booking {
     @Column(nullable = false)
     private int totalPrice;
 
-    // 예약 생성 시점의 단골 할인율(%) 스냅샷
+    // 단골 할인율(%). 결제 전에는 예약 생성 시점 값이고, 결제하면 결제에 적용한 값으로 바뀐다.
     @Column(nullable = false)
     private int discountRate;
 
@@ -131,6 +131,12 @@ public class Booking {
         this.mealType = mealType;
         this.transport = transport;
         this.totalPrice = totalPrice;
+    }
+
+    // 결제 성공 시 결제 완료로 바꾸고, 결제에 적용한 할인율을 저장한다.
+    public void pay(int discountRate) {
+        this.discountRate = discountRate;
+        this.bookingStatus = BookingStatus.PAID;
     }
 
     public void clearDrinkOptions() {

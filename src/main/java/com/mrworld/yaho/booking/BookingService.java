@@ -11,6 +11,7 @@ import com.mrworld.yaho.booking.dto.BookingUpdateResponse;
 import com.mrworld.yaho.booking.dto.QuoteRequest;
 import com.mrworld.yaho.booking.dto.QuoteResponse;
 import com.mrworld.yaho.common.enums.BookingStatus;
+import com.mrworld.yaho.common.enums.PaymentStatus;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
@@ -20,6 +21,8 @@ import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
 import com.mrworld.yaho.inventory.InventoryService;
+import com.mrworld.yaho.payment.Payment;
+import com.mrworld.yaho.payment.PaymentRepository;
 import com.mrworld.yaho.tour.DrinkOption;
 import com.mrworld.yaho.tour.DrinkOptionRepository;
 import com.mrworld.yaho.tour.Tour;
@@ -41,8 +44,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BookingService {
 
-    // 투어 시작 7일 전까지만 예약할 수 있다.
-    private static final int BOOKING_CLOSE_DAYS_BEFORE_START = 7;
     private static final int HONEYMOON_GUEST_COUNT = 2;
     private static final int CAR_2_MAX_GUEST_COUNT = 2;
 
@@ -51,6 +52,7 @@ public class BookingService {
     private final DrinkOptionRepository drinkOptionRepository;
     private final BookingRepository bookingRepository;
     private final InventoryService inventoryService;
+    private final PaymentRepository paymentRepository;
 
     // 선택한 옵션으로 결제 전(PENDING) 예약을 만든다. 금액과 할인율은 예약 시점 값으로 저장한다.
     @Transactional
@@ -100,7 +102,12 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public BookingDetailResponse getBookingDetail(Long customerId, Long bookingId) {
-        return BookingDetailResponse.from(findMyBooking(customerId, bookingId));
+        Booking booking = findMyBooking(customerId, bookingId);
+        // 가장 최근 결제 시도의 상태. 결제한 적이 없으면 null이다.
+        PaymentStatus paymentStatus = paymentRepository.findTopByBookingBookingIdOrderByPaymentIdDesc(bookingId)
+                .map(Payment::getPaymentStatus)
+                .orElse(null);
+        return BookingDetailResponse.from(booking, paymentStatus);
     }
 
     // 결제 전(PENDING) 예약의 옵션을 바꾼다. 보내지 않은 옵션은 기존 값을 유지하고 금액은 다시 계산한다.
@@ -205,7 +212,7 @@ public class BookingService {
         if (tour.getTourStatus() != TourStatus.RECRUITING) {
             throw new ConflictException("모집 중인 투어가 아닙니다.");
         }
-        if (LocalDate.now().isAfter(tour.getStartDate().minusDays(BOOKING_CLOSE_DAYS_BEFORE_START))) {
+        if (tour.isBookingClosed(LocalDate.now())) {
             throw new IllegalArgumentException("예약 마감 기간이 지난 투어입니다.");
         }
         return tour;

@@ -13,6 +13,7 @@ import com.mrworld.yaho.inventory.InventoryItem;
 import com.mrworld.yaho.inventory.InventoryItemRepository;
 import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
+import com.mrworld.yaho.payment.PaymentRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
 import com.mrworld.yaho.tour.DrinkOption;
 import com.mrworld.yaho.tour.DrinkOptionRepository;
@@ -46,6 +47,9 @@ class BookingControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -378,6 +382,7 @@ class BookingControllerTest {
     }
 
     private void cleanUp() {
+        paymentRepository.deleteAll();
         bookingRepository.deleteAll();
         tourRepository.deleteAll();
         inventoryItemRepository.deleteAll();
