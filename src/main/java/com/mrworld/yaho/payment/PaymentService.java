@@ -56,4 +56,12 @@ public class PaymentService {
         booking.pay(discountRate);
         return PaymentResponse.from(payment);
     }
+
+    // 예약의 성공 결제를 환불한다. 고객의 예약 취소와 인원 미달로 인한 투어 취소에서 함께 쓴다.
+    @Transactional
+    public void refund(Booking booking) {
+        Payment payment = paymentRepository.findByBookingIdAndPaymentStatus(booking.getBookingId(), PaymentStatus.SUCCESS)
+                .orElseThrow(() -> new IllegalStateException("환불할 결제가 없습니다."));
+        payment.refund();
+    }
 }

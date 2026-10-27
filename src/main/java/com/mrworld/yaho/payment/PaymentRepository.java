@@ -15,6 +15,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             """)
     boolean existsByBookingIdAndPaymentStatus(@Param("bookingId") Long bookingId, @Param("status") PaymentStatus status);
 
+    @Query("""
+            select p from Payment p
+            where p.booking.bookingId = :bookingId and p.paymentStatus = :status
+            """)
+    Optional<Payment> findByBookingIdAndPaymentStatus(@Param("bookingId") Long bookingId, @Param("status") PaymentStatus status);
+
     // 예약의 가장 최근 결제. 결제 시도가 없으면 비어 있다.
     Optional<Payment> findTopByBookingBookingIdOrderByPaymentIdDesc(Long bookingId);
 }
