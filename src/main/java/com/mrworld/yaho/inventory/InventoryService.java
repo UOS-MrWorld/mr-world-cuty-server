@@ -2,6 +2,7 @@ package com.mrworld.yaho.inventory;
 
 import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.dto.PageResponse;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.inventory.dto.InventoryListRequest;
@@ -58,7 +59,7 @@ public class InventoryService {
     @Transactional
     public InventoryResponse updateItem(Long itemId, InventoryUpdateRequest request) {
         if (request.getItemName() == null && request.getQuantity() == null) {
-            throw new IllegalArgumentException("수정할 값이 없습니다.");
+            throw new BadRequestException("수정할 값이 없습니다.");
         }
 
         InventoryItem item = inventoryItemRepository.findById(itemId)

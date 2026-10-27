@@ -4,6 +4,7 @@ import com.mrworld.yaho.booking.Booking;
 import com.mrworld.yaho.booking.BookingRepository;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.PaymentStatus;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.ForbiddenException;
 import com.mrworld.yaho.common.exception.NotFoundException;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 // 결제 전(PENDING) 예약의 Mock 결제. 금액은 결제 시점 고객의 단골 할인율로 다시 계산한다.
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PaymentService {
 
     // Mock 결제 시스템은 이 카드번호만 승인하고 나머지는 모두 거절한다.
@@ -39,10 +41,10 @@ public class PaymentService {
             throw new ConflictException("이미 결제가 완료된 예약입니다.");
         }
         if (booking.getBookingStatus() != BookingStatus.PENDING) {
-            throw new IllegalArgumentException("결제할 수 없는 예약입니다.");
+            throw new BadRequestException("결제할 수 없는 예약입니다.");
         }
         if (booking.getTour().isBookingClosed(LocalDate.now())) {
-            throw new IllegalArgumentException("결제 마감 기간이 지난 투어입니다.");
+            throw new BadRequestException("결제 마감 기간이 지난 투어입니다.");
         }
 
         int discountRate = booking.getCustomer().currentDiscountRate();

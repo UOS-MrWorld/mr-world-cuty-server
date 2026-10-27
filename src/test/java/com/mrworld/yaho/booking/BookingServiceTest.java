@@ -13,6 +13,7 @@ import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
@@ -157,7 +158,7 @@ class BookingServiceTest {
         when(tourRepository.findById(2L)).thenReturn(Optional.of(closed));
 
         assertThatThrownBy(() -> bookingService.getQuote(2L, 7L, request))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -166,7 +167,7 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.getQuote(
                 1L, 7L, quoteRequest(TourLevel.CLASSIC, 2, Transport.PREMIUM_VAN_10)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -175,7 +176,7 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.getQuote(
                 1L, 7L, quoteRequest(TourLevel.GRAND, 4, Transport.PREMIUM_VAN_10)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -184,7 +185,7 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.getQuote(
                 1L, 7L, quoteRequest(TourLevel.CLASSIC, 3, Transport.PREMIUM_CAR_2)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -196,7 +197,7 @@ class BookingServiceTest {
         request.setDrinkOptions(List.of(drinkItem(99L, 1)));
 
         assertThatThrownBy(() -> bookingService.getQuote(1L, 7L, request))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -241,7 +242,7 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.createBooking(
                 7L, bookingRequest(1L, TourLevel.GRAND, 3, Transport.PREMIUM_VAN_10)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
         verify(bookingRepository, never()).save(any());
     }
 

@@ -1,6 +1,7 @@
 package com.mrworld.yaho.member;
 
 import com.mrworld.yaho.common.enums.Role;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.member.dto.MemberInfoResponse;
 import com.mrworld.yaho.member.dto.MemberUpdateRequest;
@@ -62,7 +63,7 @@ class MemberServiceTest {
     @Test
     void 수정값이_없으면_예외가_발생한다() {
         assertThatThrownBy(() -> memberService.updateMyInfo(1L, request(null, null)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
         verify(memberRepository, never()).findById(any());
     }
 
