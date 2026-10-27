@@ -14,6 +14,7 @@ import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.payment.PaymentRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
+import com.mrworld.yaho.support.DatabaseCleaner;
 import com.mrworld.yaho.tour.Tour;
 import com.mrworld.yaho.tour.TourRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +41,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CustomerControllerTest {
 
     private static final String URL = "/api/v1/staff";
+
+    @Autowired
+    private DatabaseCleaner databaseCleaner;
 
     @Autowired
     private MockMvc mockMvc;
@@ -231,8 +235,6 @@ class CustomerControllerTest {
     }
 
     private void cleanUp() {
-        paymentRepository.deleteAll();
-        bookingRepository.deleteAll();
-        tourRepository.deleteAll();
+        databaseCleaner.clean();
     }
 }

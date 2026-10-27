@@ -3,6 +3,7 @@ package com.mrworld.yaho.booking;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.HotelGrade;
 import com.mrworld.yaho.common.enums.MealType;
+import com.mrworld.yaho.common.enums.PaymentStatus;
 import com.mrworld.yaho.common.enums.Role;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourLevel;
@@ -14,10 +15,10 @@ import com.mrworld.yaho.inventory.InventoryItem;
 import com.mrworld.yaho.inventory.InventoryItemRepository;
 import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
-import com.mrworld.yaho.common.enums.PaymentStatus;
 import com.mrworld.yaho.payment.Payment;
 import com.mrworld.yaho.payment.PaymentRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
+import com.mrworld.yaho.support.DatabaseCleaner;
 import com.mrworld.yaho.tour.DrinkOption;
 import com.mrworld.yaho.tour.DrinkOptionRepository;
 import com.mrworld.yaho.tour.Tour;
@@ -48,6 +49,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BookingControllerTest {
 
     private static final String URL = "/api/v1/customer/bookings";
+
+    @Autowired
+    private DatabaseCleaner databaseCleaner;
 
     @Autowired
     private MockMvc mockMvc;
@@ -475,10 +479,7 @@ class BookingControllerTest {
     }
 
     private void cleanUp() {
-        paymentRepository.deleteAll();
-        bookingRepository.deleteAll();
-        tourRepository.deleteAll();
-        inventoryItemRepository.deleteAll();
+        databaseCleaner.clean();
         drinkOptionRepository.deleteAll();
     }
 }
