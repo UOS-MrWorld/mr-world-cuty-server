@@ -170,11 +170,7 @@ public class BookingService {
         }
         booking.cancel();
 
-        return BookingCancelResponse.builder()
-                .bookingId(booking.getBookingId())
-                .bookingStatus(booking.getBookingStatus())
-                .paymentStatus(paymentStatus)
-                .build();
+        return BookingCancelResponse.of(booking, paymentStatus);
     }
 
     // 예약을 만들지 않고 선택한 옵션의 예상 금액과 단골 할인 적용 금액만 계산한다.
@@ -189,13 +185,7 @@ public class BookingService {
                 .map(Customer::currentDiscountRate)
                 .orElse(0);
 
-        return QuoteResponse.builder()
-                .basePrice(basePrice)
-                .optionPrice(totalPrice - basePrice)
-                .discountRate(discountRate)
-                .totalPrice(totalPrice)
-                .expectedPaymentAmount(totalPrice * (100 - discountRate) / 100)
-                .build();
+        return QuoteResponse.of(basePrice, totalPrice, discountRate);
     }
 
     private Booking findMyBooking(Long customerId, Long bookingId) {

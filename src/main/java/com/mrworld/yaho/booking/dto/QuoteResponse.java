@@ -12,4 +12,15 @@ public class QuoteResponse {
     private int discountRate;
     private int totalPrice;
     private int expectedPaymentAmount;
+
+    // optionPrice = totalPrice - basePrice, expectedPaymentAmount = totalPrice × (100 - discountRate) / 100
+    public static QuoteResponse of(int basePrice, int totalPrice, int discountRate) {
+        return QuoteResponse.builder()
+                .basePrice(basePrice)
+                .optionPrice(totalPrice - basePrice)
+                .discountRate(discountRate)
+                .totalPrice(totalPrice)
+                .expectedPaymentAmount(totalPrice * (100 - discountRate) / 100)
+                .build();
+    }
 }

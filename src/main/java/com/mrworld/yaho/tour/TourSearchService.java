@@ -88,10 +88,7 @@ public class TourSearchService {
                 .map(TourSummaryResponse::from)
                 .toList();
 
-        return VoiceSearchResponse.builder()
-                .recognizedText(queryText)
-                .tours(tours)
-                .build();
+        return VoiceSearchResponse.of(queryText, tours);
     }
 
     private List<Theme> detectThemes(String queryText) {
