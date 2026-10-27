@@ -15,6 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import lombok.*;
+import org.springframework.data.domain.Sort;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
@@ -31,6 +32,13 @@ public class Tour {
 
     // 투어 시작 7일 전까지만 예약·결제할 수 있다.
     public static final int BOOKING_CLOSE_DAYS_BEFORE_START = 7;
+
+    // 고객에게는 모집 중이거나 확정된 투어만 노출한다.
+    public static final List<TourStatus> CUSTOMER_VISIBLE_STATUSES =
+            List.of(TourStatus.RECRUITING, TourStatus.CONFIRMED);
+
+    // 투어 목록(고객용 목록·검색·음성 검색, 직원용 현황)은 출발이 가까운 투어부터 보여준다.
+    public static final Sort DEFAULT_SORT = Sort.by("startDate", "tourId");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

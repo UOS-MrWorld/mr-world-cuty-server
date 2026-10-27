@@ -8,15 +8,15 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class TourScheduler {
-    private final TourService tourService;
+    private final TourLifecycleService tourLifecycleService;
 
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void checkTourDeadline() {
-        tourService.closeRecruitingTours();
+        tourLifecycleService.closeRecruitingTours();
     }
 
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void checkTourEnded() {
-        tourService.completeEndedTours();
+        tourLifecycleService.completeEndedTours();
     }
 }

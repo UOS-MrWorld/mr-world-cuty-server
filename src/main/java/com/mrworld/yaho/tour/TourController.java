@@ -48,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Tour", description = "여행 상품 조회/검색/가격 계산 API")
 public class TourController {
     private final TourService tourService;
+    private final TourSearchService tourSearchService;
     private final BookingService bookingService;
 
     @GetMapping("/customer/tours")
@@ -106,7 +107,7 @@ public class TourController {
                     ))
     })
     public ResponseEntity<PageResponse<TourSummaryResponse>> searchTours(@ParameterObject @Valid TourSearchRequest request) {
-        return ResponseEntity.ok(tourService.searchTours(request));
+        return ResponseEntity.ok(tourSearchService.searchTours(request));
     }
 
     @GetMapping("/customer/tours/{tourId}")
@@ -165,7 +166,7 @@ public class TourController {
                     ))
     })
     public ResponseEntity<VoiceSearchResponse> voiceSearch(@RequestBody @Valid VoiceSearchRequest request) {
-        return ResponseEntity.ok(tourService.voiceSearch(request));
+        return ResponseEntity.ok(tourSearchService.voiceSearch(request));
     }
 
     @PostMapping("/customer/tours/{tourId}/quote")
