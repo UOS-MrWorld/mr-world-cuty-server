@@ -15,6 +15,7 @@ import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.payment.PaymentRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
+import com.mrworld.yaho.support.DatabaseCleaner;
 import com.mrworld.yaho.tour.Tour;
 import com.mrworld.yaho.tour.TourRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +42,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class InventoryControllerTest {
 
     private static final String BASE_URL = "/api/v1/staff/inventory";
+
+    @Autowired
+    private DatabaseCleaner databaseCleaner;
 
     @Autowired
     private MockMvc mockMvc;
@@ -212,10 +216,7 @@ class InventoryControllerTest {
     }
 
     private void cleanUp() {
-        paymentRepository.deleteAll();
-        bookingRepository.deleteAll();
-        tourRepository.deleteAll();
-        inventoryItemRepository.deleteAll();
+        databaseCleaner.clean();
     }
 
     private String bearer(Role role) {

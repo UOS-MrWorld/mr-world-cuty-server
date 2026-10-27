@@ -21,6 +21,7 @@ import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.notification.SmsSender;
 import com.mrworld.yaho.payment.Payment;
 import com.mrworld.yaho.payment.PaymentRepository;
+import com.mrworld.yaho.support.DatabaseCleaner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,9 @@ import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 class TourCloseTest {
+
+    @Autowired
+    private DatabaseCleaner databaseCleaner;
 
     @Autowired
     private TourLifecycleService tourLifecycleService;
@@ -237,9 +241,6 @@ class TourCloseTest {
     }
 
     private void cleanUp() {
-        paymentRepository.deleteAll();
-        bookingRepository.deleteAll();
-        tourRepository.deleteAll();
-        inventoryItemRepository.deleteAll();
+        databaseCleaner.clean();
     }
 }
