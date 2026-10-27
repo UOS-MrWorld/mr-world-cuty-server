@@ -45,7 +45,7 @@ import static org.mockito.Mockito.verify;
 class TourCloseTest {
 
     @Autowired
-    private TourService tourService;
+    private TourLifecycleService tourLifecycleService;
 
     @Autowired
     private TourRepository tourRepository;
@@ -88,7 +88,7 @@ class TourCloseTest {
         Booking second = savePaidBooking(tour, saveCustomer("01033334444"), 1);
         Booking pending = bookingRepository.save(booking(tour, saveCustomer("01055556666"), 1));
 
-        tourService.closeRecruitingTours();
+        tourLifecycleService.closeRecruitingTours();
 
         assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
                 .isEqualTo(TourStatus.CONFIRMED);
@@ -110,7 +110,7 @@ class TourCloseTest {
         Booking first = savePaidBooking(tour, customer, 2);
         Booking second = savePaidBooking(tour, customer, 1);
 
-        tourService.closeRecruitingTours();
+        tourLifecycleService.closeRecruitingTours();
 
         verify(smsSender).send(eq("01011112222"), contains("예약번호: " + first.getBookingId()));
         verify(smsSender).send(eq("01011112222"), contains("예약번호: " + second.getBookingId()));
@@ -123,7 +123,7 @@ class TourCloseTest {
         Tour tour = saveTour(6);
         Booking paid = savePaidBooking(tour, saveCustomer("01011112222"), 2);
 
-        tourService.closeRecruitingTours();
+        tourLifecycleService.closeRecruitingTours();
 
         assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
                 .isEqualTo(TourStatus.CANCELLED);
@@ -139,7 +139,7 @@ class TourCloseTest {
         Tour tour = saveTour(7);
         savePaidBooking(tour, saveCustomer("01011112222"), 3);
 
-        tourService.closeRecruitingTours();
+        tourLifecycleService.closeRecruitingTours();
 
         assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
                 .isEqualTo(TourStatus.RECRUITING);
@@ -150,7 +150,7 @@ class TourCloseTest {
         Tour tour = saveTour(6);
         savePaidBooking(tour, saveCustomer("01011112222"), 6);
 
-        tourService.closeRecruitingTours();
+        tourLifecycleService.closeRecruitingTours();
 
         // 스카프 10개에서 6명 × 2개 = 12개를 빼면 -2 (2개 부족)
         assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
@@ -171,7 +171,7 @@ class TourCloseTest {
         savePaidBooking(ended, customer, 1);
         Tour endsToday = saveEndedTour(TourStatus.CONFIRMED, 0);
 
-        tourService.completeEndedTours();
+        tourLifecycleService.completeEndedTours();
 
         assertThat(tourRepository.findById(ended.getTourId()).orElseThrow().getTourStatus())
                 .isEqualTo(TourStatus.COMPLETED);
@@ -189,7 +189,7 @@ class TourCloseTest {
         Tour ended = saveEndedTour(TourStatus.CONFIRMED, 1);
         savePaidBooking(ended, customer, 2);
 
-        tourService.completeEndedTours();
+        tourLifecycleService.completeEndedTours();
 
         assertThat(customerRepository.findById(customer.getMemberId()).orElseThrow().getLoyaltyGrade())
                 .isEqualTo(LoyaltyGrade.NORMAL);
