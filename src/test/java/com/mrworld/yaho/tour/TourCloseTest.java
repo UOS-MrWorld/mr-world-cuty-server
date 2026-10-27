@@ -146,21 +146,17 @@ class TourCloseTest {
     }
 
     @Test
-    void 재고가_부족한_투어는_모집_중으로_남기고_다른_투어는_처리한다() {
-        Tour shortTour = saveTour(6);
-        savePaidBooking(shortTour, saveCustomer("01011112222"), 6);
-        Tour okTour = saveTour(5);
-        savePaidBooking(okTour, saveCustomer("01033334444"), 3);
+    void 기념품_재고가_부족해도_확정하고_재고는_마이너스로_차감한다() {
+        Tour tour = saveTour(6);
+        savePaidBooking(tour, saveCustomer("01011112222"), 6);
 
         tourService.closeRecruitingTours();
 
-        // 스카프 10개로 shortTour(6명 × 2 = 12개)는 처리 순서와 상관없이 실패하고, okTour(3명 × 2 = 6개)는 확정된다.
-        assertThat(tourRepository.findById(shortTour.getTourId()).orElseThrow().getTourStatus())
-                .isEqualTo(TourStatus.RECRUITING);
-        assertThat(tourRepository.findById(okTour.getTourId()).orElseThrow().getTourStatus())
+        // 스카프 10개에서 6명 × 2개 = 12개를 빼면 -2 (2개 부족)
+        assertThat(tourRepository.findById(tour.getTourId()).orElseThrow().getTourStatus())
                 .isEqualTo(TourStatus.CONFIRMED);
-        verify(smsSender, never()).send(eq("01011112222"), anyString());
-        verify(smsSender).send(eq("01033334444"), anyString());
+        assertThat(inventoryItemRepository.findById(scarf.getItemId()).orElseThrow().getQuantity()).isEqualTo(-2);
+        verify(smsSender).send(eq("01011112222"), anyString());
     }
 
     @Test
