@@ -66,14 +66,7 @@ public class AuthService {
             staffRepository.save(Staff.create(savedMember));
         }
 
-        return new SignupResponse(
-                savedMember.getMemberId(),
-                savedMember.getName(),
-                savedMember.getLoginId(),
-                savedMember.getPhoneNum(),
-                savedMember.getAddress(),
-                savedMember.getRole()
-        );
+        return SignupResponse.from(savedMember);
     }
 
     @Transactional
@@ -112,14 +105,7 @@ public class AuthService {
             );
         }
 
-        return new LoginResponse(
-                member.getMemberId(),
-                member.getName(),
-                member.getRole(),
-                accessToken,
-                refreshToken,
-                "Bearer"
-        );
+        return LoginResponse.of(member, accessToken, refreshToken);
     }
 
     @Transactional(readOnly = true)
@@ -129,7 +115,7 @@ public class AuthService {
         Member member = memberRepository.findById(savedToken.getMemberId())
                 .orElseThrow(() -> new AuthenticationFailedException(INVALID_REFRESH_TOKEN));
 
-        return new TokenResponse(jwtTokenProvider.createToken(member.getMemberId(), member.getRole()));
+        return TokenResponse.of(jwtTokenProvider.createToken(member.getMemberId(), member.getRole()));
     }
 
     @Transactional

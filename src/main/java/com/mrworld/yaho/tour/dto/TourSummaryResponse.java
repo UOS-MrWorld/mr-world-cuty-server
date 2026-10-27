@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Getter
 @Builder
 public class TourSummaryResponse {
-    private long tourId;
+    private Long tourId;
     private Theme theme;
     private String tourName;
     private LocalDate startDate;
