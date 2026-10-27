@@ -14,7 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// 재고 등록/조회/수정과 예약 시점의 재고 확인(validateStock). 확정 시점의 차감(deductStock)은 투어 마감 처리와 함께 추가한다.
+// 재고 등록/조회/수정과 예약 시점의 재고 확인(validateStock), 투어 확정 시점의 재고 차감(deductStock)
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -71,6 +71,14 @@ public class InventoryService {
             if (tourGift.getInventoryItem().getQuantity() < required) {
                 throw new ConflictException("기념품 재고가 부족하여 예약할 수 없습니다.");
             }
+        }
+    }
+
+    // 투어 확정 시 기념품마다 1인당 지급 수량 × 확정 인원만큼 재고를 차감한다.
+    @Transactional
+    public void deductStock(Tour tour, int confirmedGuestCount) {
+        for (TourGift tourGift : tour.getTourGifts()) {
+            tourGift.getInventoryItem().deduct(tourGift.getQuantityPerGuest() * confirmedGuestCount);
         }
     }
 }

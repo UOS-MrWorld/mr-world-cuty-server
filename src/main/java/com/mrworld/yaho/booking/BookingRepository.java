@@ -8,7 +8,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
+    // 투어별로 특정 상태인 예약을 조회한다.
+    @Query("select b from Booking b where b.tour.tourId = :tourId and b.bookingStatus = :status")
+    List<Booking> findAllByTourIdAndBookingStatus(@Param("tourId") Long tourId, @Param("status") BookingStatus status);
 
     // 투어별 특정 상태 예약의 인원 합. 예약이 없으면 0을 반환한다.
     @Query("""

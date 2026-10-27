@@ -48,6 +48,14 @@ public class InventoryItem {
                 .build();
     }
 
+    // 투어 확정 시 기념품을 지급한 만큼 재고를 줄인다.
+    public void deduct(int amount) {
+        if (quantity < amount) {
+            throw new IllegalStateException("재고가 부족하여 차감할 수 없습니다. (" + itemName + ")");
+        }
+        this.quantity -= amount;
+    }
+
     public void update(String itemName, Integer quantity) {
         if (itemName != null) this.itemName = itemName;
         if (quantity != null) this.quantity = quantity;
