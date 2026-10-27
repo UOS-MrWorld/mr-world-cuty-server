@@ -14,8 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.mrworld.yaho.security.LoginMemberId;
 import org.springframework.web.bind.annotation.*;
 
 // 회원가입 / 로그인 / 토큰 재발급 / 로그아웃
@@ -39,11 +38,6 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.LOGIN_ID_DUPLICATED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
@@ -64,11 +58,6 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.INVALID_CREDENTIALS)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
@@ -89,11 +78,6 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.INVALID_REFRESH_TOKEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<TokenResponse> refresh(@RequestBody @Valid RefreshTokenRequest request) {
@@ -114,18 +98,13 @@ public class AuthController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<Void> logout(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long memberId,
             @RequestBody @Valid RefreshTokenRequest request
     ) {
-        authService.logout(Long.valueOf(userDetails.getUsername()), request.refreshToken());
+        authService.logout(memberId, request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 }

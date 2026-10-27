@@ -15,8 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.mrworld.yaho.security.LoginMemberId;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,20 +33,10 @@ public class MemberController {
     @GetMapping("/me")
     @Operation(summary = "내 회원정보 조회", description = "로그인 사용자의 공통 회원정보를 조회합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
-                    ))
+            @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true)
     })
-    public ResponseEntity<MemberInfoResponse> getMyInfo(@AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(memberService.getMyInfo(Long.valueOf(userDetails.getUsername())));
+    public ResponseEntity<MemberInfoResponse> getMyInfo(@LoginMemberId Long memberId) {
+        return ResponseEntity.ok(memberService.getMyInfo(memberId));
     }
 
     @PatchMapping("/me")
@@ -58,22 +47,12 @@ public class MemberController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<MemberUpdateResponse> updateMyInfo(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long memberId,
             @RequestBody @Valid MemberUpdateRequest request
     ) {
-        return ResponseEntity.ok(memberService.updateMyInfo(Long.valueOf(userDetails.getUsername()), request));
+        return ResponseEntity.ok(memberService.updateMyInfo(memberId, request));
     }
 }

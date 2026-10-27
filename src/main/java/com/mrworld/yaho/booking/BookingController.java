@@ -25,8 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.mrworld.yaho.security.LoginMemberId;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,16 +54,6 @@ public class BookingController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 투어",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
@@ -74,18 +63,12 @@ public class BookingController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.CONFLICT)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<BookingResponse> createBooking(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long customerId,
             @RequestBody @Valid BookingRequest request
     ) {
-        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createBooking(customerId, request));
     }
 
@@ -97,28 +80,12 @@ public class BookingController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<PageResponse<BookingSummaryResponse>> getBookings(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long customerId,
             @ParameterObject @Valid BookingListRequest request
     ) {
-        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getBookings(customerId, request));
     }
 
@@ -126,11 +93,6 @@ public class BookingController {
     @Operation(summary = "예약 상세 조회", description = "본인의 예약 상세, 최종 옵션, 결제 및 투어 상태를 조회합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
             @ApiResponse(responseCode = "403", description = "고객 권한이 아니거나 본인 예약이 아님",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
@@ -140,18 +102,12 @@ public class BookingController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<BookingDetailResponse> getBookingDetail(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long customerId,
             @PathVariable Long bookingId
     ) {
-        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getBookingDetail(customerId, bookingId));
     }
 
@@ -164,11 +120,6 @@ public class BookingController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
                     )),
             @ApiResponse(responseCode = "403", description = "고객 권한이 아니거나 본인 예약이 아님",
                     content = @Content(
@@ -184,19 +135,13 @@ public class BookingController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.CONFLICT)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<BookingUpdateResponse> updateBookingOptions(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long customerId,
             @PathVariable Long bookingId,
             @RequestBody @Valid BookingUpdateRequest request
     ) {
-        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.updateBookingOptions(customerId, bookingId, request));
     }
 
@@ -210,11 +155,6 @@ public class BookingController {
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
                     )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
             @ApiResponse(responseCode = "403", description = "고객 권한이 아니거나 본인 예약이 아님",
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
@@ -224,18 +164,12 @@ public class BookingController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<BookingCancelResponse> cancelBooking(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long customerId,
             @PathVariable Long bookingId
     ) {
-        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.cancelBooking(customerId, bookingId));
     }
 
@@ -249,28 +183,12 @@ public class BookingController {
                     content = @Content(
                             schema = @Schema(implementation = ResultDto.class),
                             examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
-                    )),
-            @ApiResponse(responseCode = "403", description = "고객 권한이 아님",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
-                    )),
-            @ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
     public ResponseEntity<PageResponse<TravelHistoryResponse>> getTravelHistory(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @LoginMemberId Long customerId,
             @ParameterObject @Valid PagingRequest request
     ) {
-        Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getTravelHistory(customerId, request));
     }
 }
