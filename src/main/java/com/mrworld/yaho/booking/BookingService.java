@@ -43,8 +43,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// 신청 처리 + 여행확정 판정(최소 인원 도달 시 자동 확정) + 재고 차감/알림 발송 호출
-// 예약 금액(할인 전 총 금액)과 단골 할인율 계산은 이 서비스가 담당한다.
+// 고객 예약의 생성·옵션 수정·조회·취소와 여행 내역 조회, 옵션 가격 계산(quote)을 맡는다.
+// 예약 금액(할인 전 총 금액)과 단골 할인율 계산도 이 서비스가 담당한다. 투어 확정·취소는 TourLifecycleService가 맡는다.
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
