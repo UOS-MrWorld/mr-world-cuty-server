@@ -3,6 +3,7 @@ package com.mrworld.yaho.auth;
 import com.mrworld.yaho.auth.dto.*;
 import com.mrworld.yaho.common.enums.Role;
 import com.mrworld.yaho.common.exception.AuthenticationFailedException;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
@@ -11,14 +12,15 @@ import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.member.Staff;
 import com.mrworld.yaho.member.StaffRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AuthService {
     private static final String LOGIN_ID_DUPLICATED = "이미 사용 중인 로그인 아이디입니다.";
     private static final String INVALID_CREDENTIALS = "아이디 또는 비밀번호가 올바르지 않습니다.";
@@ -34,7 +36,7 @@ public class AuthService {
     @Transactional
     public SignupResponse signup(SignupRequest request) {
         if(!request.getPassword().equals(request.getConfirmPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+            throw new BadRequestException("비밀번호가 일치하지 않습니다.");
         }
 
         if(memberRepository.existsByLoginId(request.getLoginId())) {
@@ -108,7 +110,6 @@ public class AuthService {
         return LoginResponse.of(member, accessToken, refreshToken);
     }
 
-    @Transactional(readOnly = true)
     public TokenResponse refresh(String refreshToken) {
         RefreshToken savedToken = findValidRefreshToken(refreshToken);
 

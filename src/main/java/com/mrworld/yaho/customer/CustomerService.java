@@ -4,6 +4,7 @@ import com.mrworld.yaho.booking.BookingRepository;
 import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.enums.LoyaltyGrade;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.dto.CustomerDetailResponse;
 import com.mrworld.yaho.customer.dto.CustomerListRequest;
@@ -65,7 +66,7 @@ public class CustomerService {
                 ? List.of()
                 : customerRepository.findAllByLoyaltyGradeAndLoyaltyDiscountAppliedFalse(loyaltyGrade);
         if (eligible.isEmpty()) {
-            throw new IllegalArgumentException("할인을 적용할 수 있는 고객이 없습니다.");
+            throw new BadRequestException("할인을 적용할 수 있는 고객이 없습니다.");
         }
 
         LocalDateTime now = LocalDateTime.now();

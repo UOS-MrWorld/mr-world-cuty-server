@@ -18,6 +18,7 @@ import com.mrworld.yaho.common.enums.PaymentStatus;
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.ForbiddenException;
 import com.mrworld.yaho.common.exception.NotFoundException;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 // 예약 금액(할인 전 총 금액)과 단골 할인율 계산은 이 서비스가 담당한다.
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BookingService {
 
     // 내 예약 목록은 최근에 만든 예약부터, 여행 내역은 여행 시작일이 늦은(최근) 여행부터 보여준다.
@@ -93,7 +95,6 @@ public class BookingService {
     }
 
     // 로그인 고객의 예약을 상태별로 최근 순 조회한다.
-    @Transactional(readOnly = true)
     public PageResponse<BookingSummaryResponse> getBookings(Long customerId, BookingListRequest request) {
         Page<Booking> page = bookingRepository.findMyBookings(
                 customerId, request.getStatus(), request.toPageable(BOOKING_LIST_SORT));
@@ -101,14 +102,12 @@ public class BookingService {
     }
 
     // 고객의 여행 내역(예약한 여행과 완료된 여행)을 최근 순으로 조회한다. 로그인 직후 팝업에 쓴다.
-    @Transactional(readOnly = true)
     public PageResponse<TravelHistoryResponse> getTravelHistory(Long customerId, PagingRequest request) {
         Page<Booking> page = bookingRepository.findTravelHistoryByCustomerId(
                 customerId, request.toPageable(TRAVEL_HISTORY_SORT));
         return PageResponse.of(page, TravelHistoryResponse::from);
     }
 
-    @Transactional(readOnly = true)
     public BookingDetailResponse getBookingDetail(Long customerId, Long bookingId) {
         Booking booking = findMyBooking(customerId, bookingId);
         // 가장 최근 결제 시도의 상태. 결제한 적이 없으면 null이다.
@@ -122,7 +121,7 @@ public class BookingService {
     @Transactional
     public BookingUpdateResponse updateBookingOptions(Long customerId, Long bookingId, BookingUpdateRequest request) {
         if (request.hasNoUpdate()) {
-            throw new IllegalArgumentException("수정할 값이 없습니다.");
+            throw new BadRequestException("수정할 값이 없습니다.");
         }
 
         Booking booking = findMyBooking(customerId, bookingId);
@@ -158,10 +157,10 @@ public class BookingService {
     public BookingCancelResponse cancelBooking(Long customerId, Long bookingId) {
         Booking booking = findMyBooking(customerId, bookingId);
         if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
-            throw new IllegalArgumentException("이미 취소된 예약입니다.");
+            throw new BadRequestException("이미 취소된 예약입니다.");
         }
         if (booking.getTour().isBookingClosed(LocalDate.now())) {
-            throw new IllegalArgumentException("취소 마감 기간이 지난 투어입니다.");
+            throw new BadRequestException("취소 마감 기간이 지난 투어입니다.");
         }
 
         PaymentStatus paymentStatus = null;
@@ -179,7 +178,6 @@ public class BookingService {
     }
 
     // 예약을 만들지 않고 선택한 옵션의 예상 금액과 단골 할인 적용 금액만 계산한다.
-    @Transactional(readOnly = true)
     public QuoteResponse getQuote(Long tourId, Long customerId, QuoteRequest request) {
         Tour tour = findBookableTour(tourId);
         validateBookingOptions(tour, request);
@@ -239,22 +237,22 @@ public class BookingService {
             throw new ConflictException("모집 중인 투어가 아닙니다.");
         }
         if (tour.isBookingClosed(LocalDate.now())) {
-            throw new IllegalArgumentException("예약 마감 기간이 지난 투어입니다.");
+            throw new BadRequestException("예약 마감 기간이 지난 투어입니다.");
         }
         return tour;
     }
 
     private void validateBookingOptions(Tour tour, QuoteRequest request) {
         if (!tour.availableLevels().contains(request.getTourLevel())) {
-            throw new IllegalArgumentException("선택할 수 없는 투어 등급입니다.");
+            throw new BadRequestException("선택할 수 없는 투어 등급입니다.");
         }
 
         int guestCount = request.getGuestCount();
         if (tour.getTheme() == Theme.HONEYMOON && guestCount != HONEYMOON_GUEST_COUNT) {
-            throw new IllegalArgumentException("허니문 투어는 2명만 예약할 수 있습니다.");
+            throw new BadRequestException("허니문 투어는 2명만 예약할 수 있습니다.");
         }
         if (request.getTransport() == Transport.PREMIUM_CAR_2 && guestCount > CAR_2_MAX_GUEST_COUNT) {
-            throw new IllegalArgumentException("2인 차량은 3명 이상 예약에 선택할 수 없습니다.");
+            throw new BadRequestException("2인 차량은 3명 이상 예약에 선택할 수 없습니다.");
         }
     }
 
@@ -288,7 +286,7 @@ public class BookingService {
 
         for (QuoteRequest.DrinkOptionItem item : drinkOptions) {
             if (!found.containsKey(item.getOptionId())) {
-                throw new IllegalArgumentException("존재하지 않는 음료 옵션입니다.");
+                throw new BadRequestException("존재하지 않는 음료 옵션입니다.");
             }
         }
         return found;

@@ -6,6 +6,7 @@ import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.TourStatus;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.inventory.InventoryItem;
@@ -62,7 +63,7 @@ public class TourService {
     @Transactional
     public TourResponse createTour(TourCreateRequest request) {
         if (request.getEndDate().isBefore(request.getStartDate())) {
-            throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
+            throw new BadRequestException("종료일은 시작일보다 빠를 수 없습니다.");
         }
 
         List<TourCreateRequest.GiftItem> gifts = request.getGifts() == null ? List.of() : request.getGifts();
@@ -86,7 +87,7 @@ public class TourService {
     public PageResponse<StaffTourSummaryResponse> getStaffTours(StaffTourListRequest request) {
         if (request.getStartDateFrom() != null && request.getStartDateTo() != null
                 && request.getStartDateFrom().isAfter(request.getStartDateTo())) {
-            throw new IllegalArgumentException("시작일 하한은 상한보다 늦을 수 없습니다.");
+            throw new BadRequestException("시작일 하한은 상한보다 늦을 수 없습니다.");
         }
 
         Page<Tour> page = tourRepository.searchForStaff(
@@ -118,7 +119,7 @@ public class TourService {
     @Transactional
     public TourResponse updateTour(Long tourId, TourUpdateRequest request) {
         if (request.hasNoUpdate()) {
-            throw new IllegalArgumentException("수정할 값이 없습니다.");
+            throw new BadRequestException("수정할 값이 없습니다.");
         }
 
         Tour tour = tourRepository.findById(tourId)
@@ -130,7 +131,7 @@ public class TourService {
         LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : tour.getStartDate();
         LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : tour.getEndDate();
         if (endDate.isBefore(startDate)) {
-            throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
+            throw new BadRequestException("종료일은 시작일보다 빠를 수 없습니다.");
         }
 
         Map<Long, InventoryItem> items = request.getGifts() == null ? Map.of() : findGiftItems(request.getGifts());
@@ -157,7 +158,7 @@ public class TourService {
     private Map<Long, InventoryItem> findGiftItems(List<TourCreateRequest.GiftItem> gifts) {
         List<Long> itemIds = gifts.stream().map(TourCreateRequest.GiftItem::getItemId).toList();
         if (itemIds.stream().distinct().count() != itemIds.size()) {
-            throw new IllegalArgumentException("같은 기념품을 중복해서 지정할 수 없습니다.");
+            throw new BadRequestException("같은 기념품을 중복해서 지정할 수 없습니다.");
         }
 
         Map<Long, InventoryItem> items = inventoryItemRepository.findAllById(itemIds).stream()

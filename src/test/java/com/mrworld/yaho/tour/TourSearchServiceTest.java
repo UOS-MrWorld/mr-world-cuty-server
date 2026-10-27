@@ -2,6 +2,7 @@ package com.mrworld.yaho.tour;
 
 import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
@@ -140,7 +141,7 @@ class TourSearchServiceTest {
     @Test
     void 음성_검색_문장이_공백이면_예외가_발생한다() {
         assertThatThrownBy(() -> tourSearchService.voiceSearch(voiceRequest("   ", null, null)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     private VoiceSearchRequest voiceRequest(String queryText, Integer maxPrice, LocalDate departureDate) {

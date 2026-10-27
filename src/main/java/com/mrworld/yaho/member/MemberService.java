@@ -1,5 +1,6 @@
 package com.mrworld.yaho.member;
 
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.member.dto.MemberInfoResponse;
 import com.mrworld.yaho.member.dto.MemberUpdateRequest;
@@ -22,7 +23,7 @@ public class MemberService {
     @Transactional
     public MemberUpdateResponse updateMyInfo(Long memberId, MemberUpdateRequest request) {
         if (request.getPhoneNum() == null && request.getAddress() == null) {
-            throw new IllegalArgumentException("수정할 값이 없습니다.");
+            throw new BadRequestException("수정할 값이 없습니다.");
         }
 
         Member member = findMember(memberId);

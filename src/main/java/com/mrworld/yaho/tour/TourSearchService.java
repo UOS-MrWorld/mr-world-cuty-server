@@ -2,6 +2,7 @@ package com.mrworld.yaho.tour;
 
 import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.enums.Theme;
+import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
 import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
@@ -62,7 +63,7 @@ public class TourSearchService {
     public VoiceSearchResponse voiceSearch(VoiceSearchRequest request) {
         String queryText = request.getQueryText() == null ? "" : request.getQueryText().trim();
         if (queryText.isEmpty()) {
-            throw new IllegalArgumentException("검색 문장이 비어 있습니다.");
+            throw new BadRequestException("검색 문장이 비어 있습니다.");
         }
 
         List<Theme> themes = detectThemes(queryText);
