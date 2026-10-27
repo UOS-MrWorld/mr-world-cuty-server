@@ -1,6 +1,5 @@
 package com.mrworld.yaho.config;
 
-import com.mrworld.yaho.security.LoginMemberId;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.examples.Example;
@@ -14,7 +13,6 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OpenApiCustomizer;
-import org.springdoc.core.utils.SpringDocUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,11 +25,6 @@ public class SwaggerConfig {
     // 인증 없이 호출하는 API. 이 경로에는 401/403 공통 응답을 붙이지 않는다.
     private static final Set<String> PUBLIC_PATHS =
             Set.of("/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/refresh");
-
-    static {
-        // @LoginMemberId는 서버가 토큰에서 채우는 값이라 API 문서의 요청 파라미터로 보이지 않게 한다.
-        SpringDocUtils.getConfig().addAnnotationsToIgnore(LoginMemberId.class);
-    }
 
     @Bean
     public OpenAPI openAPI() {
