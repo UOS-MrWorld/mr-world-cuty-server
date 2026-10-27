@@ -3,13 +3,14 @@ package com.mrworld.yaho.booking;
 import com.mrworld.yaho.booking.dto.BookingCancelResponse;
 import com.mrworld.yaho.booking.dto.BookingDetailResponse;
 import com.mrworld.yaho.booking.dto.BookingListRequest;
-import com.mrworld.yaho.booking.dto.BookingListResponse;
 import com.mrworld.yaho.booking.dto.BookingRequest;
 import com.mrworld.yaho.booking.dto.BookingResponse;
+import com.mrworld.yaho.booking.dto.BookingSummaryResponse;
 import com.mrworld.yaho.booking.dto.BookingUpdateRequest;
 import com.mrworld.yaho.booking.dto.BookingUpdateResponse;
-import com.mrworld.yaho.booking.dto.TravelHistoryListResponse;
-import com.mrworld.yaho.booking.dto.TravelHistoryRequest;
+import com.mrworld.yaho.booking.dto.TravelHistoryResponse;
+import com.mrworld.yaho.common.dto.PageResponse;
+import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.dto.ResultDto;
 import com.mrworld.yaho.config.SwaggerExamples;
 import io.swagger.v3.oas.annotations.Operation;
@@ -113,7 +114,7 @@ public class BookingController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<BookingListResponse> getBookings(
+    public ResponseEntity<PageResponse<BookingSummaryResponse>> getBookings(
             @AuthenticationPrincipal UserDetails userDetails,
             @ParameterObject @Valid BookingListRequest request
     ) {
@@ -265,9 +266,9 @@ public class BookingController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<TravelHistoryListResponse> getTravelHistory(
+    public ResponseEntity<PageResponse<TravelHistoryResponse>> getTravelHistory(
             @AuthenticationPrincipal UserDetails userDetails,
-            @ParameterObject @Valid TravelHistoryRequest request
+            @ParameterObject @Valid PagingRequest request
     ) {
         Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.getTravelHistory(customerId, request));

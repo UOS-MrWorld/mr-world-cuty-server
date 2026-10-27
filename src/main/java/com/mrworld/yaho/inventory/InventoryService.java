@@ -1,9 +1,9 @@
 package com.mrworld.yaho.inventory;
 
+import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.inventory.dto.InventoryListRequest;
-import com.mrworld.yaho.inventory.dto.InventoryListResponse;
 import com.mrworld.yaho.inventory.dto.InventoryRegisterRequest;
 import com.mrworld.yaho.inventory.dto.InventoryResponse;
 import com.mrworld.yaho.inventory.dto.InventoryUpdateRequest;
@@ -12,6 +12,7 @@ import com.mrworld.yaho.tour.TourGift;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,21 +27,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class InventoryService {
+    private static final Sort ITEM_SORT = Sort.by("itemId");
+
     private final InventoryItemRepository inventoryItemRepository;
 
-    public InventoryListResponse getItems(InventoryListRequest request) {
+    public PageResponse<InventoryResponse> getItems(InventoryListRequest request) {
         String keyword = request.getKeyword() == null ? "" : request.getKeyword().trim();
-        Page<InventoryItem> page = inventoryItemRepository.findByItemNameContaining(keyword, request.toPageable());
+        Page<InventoryItem> page = inventoryItemRepository.findByItemNameContaining(keyword, request.toPageable(ITEM_SORT));
 
         Map<Long, Integer> requiredQuantities = findRequiredQuantities(
                 page.getContent().stream().map(InventoryItem::getItemId).toList());
 
-        return InventoryListResponse.builder()
-                .content(page.getContent().stream()
-                        .map(item -> InventoryResponse.from(item, requiredQuantities.getOrDefault(item.getItemId(), 0)))
-                        .toList())
-                .totalElements(page.getTotalElements())
-                .build();
+        return PageResponse.of(page,
+                item -> InventoryResponse.from(item, requiredQuantities.getOrDefault(item.getItemId(), 0)));
     }
 
     @Transactional

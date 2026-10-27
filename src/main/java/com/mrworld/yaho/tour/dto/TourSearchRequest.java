@@ -1,5 +1,6 @@
 package com.mrworld.yaho.tour.dto;
 
+import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.enums.Theme;
 import jakarta.validation.constraints.Min;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import java.time.LocalDate;
 // GUI 검색 조건은 모두 선택값이며 여러 조건은 AND로 적용한다.
 @Getter
 @Setter
-public class TourSearchRequest extends TourListRequest {
+public class TourSearchRequest extends PagingRequest {
     private String keyword;
 
     private Theme theme;

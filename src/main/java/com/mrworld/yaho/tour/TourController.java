@@ -3,17 +3,18 @@ package com.mrworld.yaho.tour;
 import com.mrworld.yaho.booking.BookingService;
 import com.mrworld.yaho.booking.dto.QuoteRequest;
 import com.mrworld.yaho.booking.dto.QuoteResponse;
+import com.mrworld.yaho.common.dto.PageResponse;
+import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.dto.ResultDto;
 import com.mrworld.yaho.config.SwaggerExamples;
+import com.mrworld.yaho.tour.dto.StaffTourDetailResponse;
 import com.mrworld.yaho.tour.dto.StaffTourListRequest;
-import com.mrworld.yaho.tour.dto.StaffTourListResponse;
+import com.mrworld.yaho.tour.dto.StaffTourSummaryResponse;
 import com.mrworld.yaho.tour.dto.TourCreateRequest;
 import com.mrworld.yaho.tour.dto.TourDetailResponse;
-import com.mrworld.yaho.tour.dto.TourListRequest;
-import com.mrworld.yaho.tour.dto.TourListResponse;
 import com.mrworld.yaho.tour.dto.TourResponse;
 import com.mrworld.yaho.tour.dto.TourSearchRequest;
-import com.mrworld.yaho.tour.dto.StaffTourDetailResponse;
+import com.mrworld.yaho.tour.dto.TourSummaryResponse;
 import com.mrworld.yaho.tour.dto.TourUpdateRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchRequest;
 import com.mrworld.yaho.tour.dto.VoiceSearchResponse;
@@ -74,7 +75,7 @@ public class TourController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<TourListResponse> getTours(@ParameterObject @Valid TourListRequest request) {
+    public ResponseEntity<PageResponse<TourSummaryResponse>> getTours(@ParameterObject @Valid PagingRequest request) {
         return ResponseEntity.ok(tourService.getTours(request));
     }
 
@@ -104,7 +105,7 @@ public class TourController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<TourListResponse> searchTours(@ParameterObject @Valid TourSearchRequest request) {
+    public ResponseEntity<PageResponse<TourSummaryResponse>> searchTours(@ParameterObject @Valid TourSearchRequest request) {
         return ResponseEntity.ok(tourService.searchTours(request));
     }
 
@@ -273,7 +274,7 @@ public class TourController {
                             examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
                     ))
     })
-    public ResponseEntity<StaffTourListResponse> getStaffTours(@ParameterObject @Valid StaffTourListRequest request) {
+    public ResponseEntity<PageResponse<StaffTourSummaryResponse>> getStaffTours(@ParameterObject @Valid StaffTourListRequest request) {
         return ResponseEntity.ok(tourService.getStaffTours(request));
     }
 
