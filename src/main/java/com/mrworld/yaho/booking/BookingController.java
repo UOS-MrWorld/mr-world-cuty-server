@@ -1,5 +1,6 @@
 package com.mrworld.yaho.booking;
 
+import com.mrworld.yaho.booking.dto.BookingCancelResponse;
 import com.mrworld.yaho.booking.dto.BookingDetailResponse;
 import com.mrworld.yaho.booking.dto.BookingListRequest;
 import com.mrworld.yaho.booking.dto.BookingListResponse;
@@ -32,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 // 고객 예약 API. 예약 생성(createBooking), 목록/상세 조회(getBookings, getBookingDetail),
-// 결제 전 옵션 수정(updateBookingOptions)을 제공하며, 취소·여행 내역 조회는 같은 경로 아래에 추가한다.
+// 결제 전 옵션 수정(updateBookingOptions), 예약 취소(cancelBooking)를 제공하며, 여행 내역 조회는 추가 예정이다.
 @RestController
 @RequestMapping("/api/v1/customer/bookings")
 @RequiredArgsConstructor
@@ -193,5 +194,44 @@ public class BookingController {
     ) {
         Long customerId = Long.valueOf(userDetails.getUsername());
         return ResponseEntity.ok(bookingService.updateBookingOptions(customerId, bookingId, request));
+    }
+
+    @PatchMapping("/{bookingId}/cancel")
+    @Operation(summary = "여행 예약 취소",
+            description = "투어 시작 7일 전까지 본인 예약을 취소합니다. 결제 완료 예약이면 결제를 환불(REFUNDED) 처리합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "취소 성공", useReturnTypeSchema = true),
+            @ApiResponse(responseCode = "400", description = "이미 취소된 예약 또는 취소 마감 이후",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
+                    )),
+            @ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.UNAUTHORIZED)
+                    )),
+            @ApiResponse(responseCode = "403", description = "고객 권한이 아니거나 본인 예약이 아님",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.FORBIDDEN)
+                    )),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 예약",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
+                    )),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(
+                            schema = @Schema(implementation = ResultDto.class),
+                            examples = @ExampleObject(value = SwaggerExamples.INTERNAL_SERVER_ERROR)
+                    ))
+    })
+    public ResponseEntity<BookingCancelResponse> cancelBooking(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long bookingId
+    ) {
+        Long customerId = Long.valueOf(userDetails.getUsername());
+        return ResponseEntity.ok(bookingService.cancelBooking(customerId, bookingId));
     }
 }

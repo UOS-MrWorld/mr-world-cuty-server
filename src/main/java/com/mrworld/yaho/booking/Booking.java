@@ -139,6 +139,10 @@ public class Booking {
         this.bookingStatus = BookingStatus.PAID;
     }
 
+    public void cancel() {
+        this.bookingStatus = BookingStatus.CANCELLED;
+    }
+
     public void clearDrinkOptions() {
         bookingDrinkOptions.clear();
     }

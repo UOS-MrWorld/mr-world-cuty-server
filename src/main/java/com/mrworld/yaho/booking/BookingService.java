@@ -1,5 +1,6 @@
 package com.mrworld.yaho.booking;
 
+import com.mrworld.yaho.booking.dto.BookingCancelResponse;
 import com.mrworld.yaho.booking.dto.BookingDetailResponse;
 import com.mrworld.yaho.booking.dto.BookingListRequest;
 import com.mrworld.yaho.booking.dto.BookingListResponse;
@@ -23,6 +24,7 @@ import com.mrworld.yaho.customer.CustomerRepository;
 import com.mrworld.yaho.inventory.InventoryService;
 import com.mrworld.yaho.payment.Payment;
 import com.mrworld.yaho.payment.PaymentRepository;
+import com.mrworld.yaho.payment.PaymentService;
 import com.mrworld.yaho.tour.DrinkOption;
 import com.mrworld.yaho.tour.DrinkOptionRepository;
 import com.mrworld.yaho.tour.Tour;
@@ -53,6 +55,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final InventoryService inventoryService;
     private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
 
     // 선택한 옵션으로 결제 전(PENDING) 예약을 만든다. 금액과 할인율은 예약 시점 값으로 저장한다.
     @Transactional
@@ -150,6 +153,31 @@ public class BookingService {
         }
 
         return BookingUpdateResponse.from(booking);
+    }
+
+    // 투어 시작 7일 전까지 본인 예약을 취소한다. 결제 완료 예약이면 성공 결제를 환불한다.
+    @Transactional
+    public BookingCancelResponse cancelBooking(Long customerId, Long bookingId) {
+        Booking booking = findMyBooking(customerId, bookingId);
+        if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+            throw new IllegalArgumentException("이미 취소된 예약입니다.");
+        }
+        if (booking.getTour().isBookingClosed(LocalDate.now())) {
+            throw new IllegalArgumentException("취소 마감 기간이 지난 투어입니다.");
+        }
+
+        PaymentStatus paymentStatus = null;
+        if (booking.getBookingStatus() == BookingStatus.PAID) {
+            paymentService.refund(booking);
+            paymentStatus = PaymentStatus.REFUNDED;
+        }
+        booking.cancel();
+
+        return BookingCancelResponse.builder()
+                .bookingId(booking.getBookingId())
+                .bookingStatus(booking.getBookingStatus())
+                .paymentStatus(paymentStatus)
+                .build();
     }
 
     // 예약을 만들지 않고 선택한 옵션의 예상 금액과 단골 할인 적용 금액만 계산한다.

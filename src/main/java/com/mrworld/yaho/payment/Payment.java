@@ -59,4 +59,12 @@ public class Payment {
                 .amount(amount)
                 .build();
     }
+
+    // 성공한 결제를 환불 상태로 바꾼다. Mock 결제라 실제 환불 요청은 없다.
+    public void refund() {
+        if (paymentStatus != PaymentStatus.SUCCESS) {
+            throw new IllegalStateException("성공한 결제만 환불할 수 있습니다.");
+        }
+        this.paymentStatus = PaymentStatus.REFUNDED;
+    }
 }

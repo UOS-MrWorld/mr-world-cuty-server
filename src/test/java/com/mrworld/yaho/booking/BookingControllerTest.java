@@ -13,6 +13,8 @@ import com.mrworld.yaho.inventory.InventoryItem;
 import com.mrworld.yaho.inventory.InventoryItemRepository;
 import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
+import com.mrworld.yaho.common.enums.PaymentStatus;
+import com.mrworld.yaho.payment.Payment;
 import com.mrworld.yaho.payment.PaymentRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
 import com.mrworld.yaho.tour.DrinkOption;
@@ -30,6 +32,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -343,6 +346,64 @@ class BookingControllerTest {
                         .header("Authorization", bearer())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"guestCount\": 2}"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void 결제_전_예약은_환불_없이_취소된다() throws Exception {
+        Booking booking = bookingRepository.save(booking(2));
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId() + "/cancel").header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value(booking.getBookingId()))
+                .andExpect(jsonPath("$.bookingStatus").value("CANCELLED"))
+                .andExpect(jsonPath("$.paymentStatus").doesNotExist());
+
+        assertThat(bookingRepository.findById(booking.getBookingId()).orElseThrow().getBookingStatus())
+                .isEqualTo(BookingStatus.CANCELLED);
+    }
+
+    @Test
+    void 결제_완료_예약을_취소하면_결제가_환불된다() throws Exception {
+        Booking booking = booking(2);
+        ReflectionTestUtils.setField(booking, "bookingStatus", BookingStatus.PAID);
+        booking = bookingRepository.save(booking);
+        Payment payment = paymentRepository.save(Payment.success(booking, 1_000_000, LocalDateTime.now()));
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId() + "/cancel").header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingStatus").value("CANCELLED"))
+                .andExpect(jsonPath("$.paymentStatus").value("REFUNDED"));
+
+        assertThat(paymentRepository.findById(payment.getPaymentId()).orElseThrow().getPaymentStatus())
+                .isEqualTo(PaymentStatus.REFUNDED);
+    }
+
+    @Test
+    void 이미_취소했거나_취소_마감이_지난_예약은_400이다() throws Exception {
+        Booking booking = bookingRepository.save(booking(2));
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId() + "/cancel").header("Authorization", bearer()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch(URL + "/" + booking.getBookingId() + "/cancel").header("Authorization", bearer()))
+                .andExpect(status().isBadRequest());
+
+        Booking closed = bookingRepository.save(booking(1));
+        ReflectionTestUtils.setField(golfTour, "startDate", LocalDate.now().plusDays(6));
+        ReflectionTestUtils.setField(golfTour, "endDate", LocalDate.now().plusDays(9));
+        tourRepository.save(golfTour);
+
+        mockMvc.perform(patch(URL + "/" + closed.getBookingId() + "/cancel").header("Authorization", bearer()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 다른_고객의_예약은_취소할_수_없다() throws Exception {
+        Booking othersBooking = bookingRepository.save(othersBooking());
+
+        mockMvc.perform(patch(URL + "/" + othersBooking.getBookingId() + "/cancel").header("Authorization", bearer()))
+                .andExpect(status().isForbidden());
+        assertThat(bookingRepository.findById(othersBooking.getBookingId()).orElseThrow().getBookingStatus())
+                .isEqualTo(BookingStatus.PENDING);
     }
 
     private Booking othersBooking() {
