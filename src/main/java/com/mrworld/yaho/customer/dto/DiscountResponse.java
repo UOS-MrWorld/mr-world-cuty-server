@@ -10,4 +10,12 @@ public class DiscountResponse {
     private int targetCount;
     private int appliedCount;
     private int skippedCount;
+
+    public static DiscountResponse of(int targetCount, int appliedCount) {
+        return DiscountResponse.builder()
+                .targetCount(targetCount)
+                .appliedCount(appliedCount)
+                .skippedCount(targetCount - appliedCount)
+                .build();
+    }
 }

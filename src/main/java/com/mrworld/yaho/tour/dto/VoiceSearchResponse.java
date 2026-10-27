@@ -11,4 +11,11 @@ public class VoiceSearchResponse {
     // 검색에 사용한 문장
     private String recognizedText;
     private List<TourSummaryResponse> tours;
+
+    public static VoiceSearchResponse of(String recognizedText, List<TourSummaryResponse> tours) {
+        return VoiceSearchResponse.builder()
+                .recognizedText(recognizedText)
+                .tours(tours)
+                .build();
+    }
 }

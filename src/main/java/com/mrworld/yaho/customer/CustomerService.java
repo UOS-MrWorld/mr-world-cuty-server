@@ -72,10 +72,6 @@ public class CustomerService {
         LocalDateTime now = LocalDateTime.now();
         eligible.forEach(customer -> customer.activateDiscount(now));
 
-        return DiscountResponse.builder()
-                .targetCount(targetCount)
-                .appliedCount(eligible.size())
-                .skippedCount(targetCount - eligible.size())
-                .build();
+        return DiscountResponse.of(targetCount, eligible.size());
     }
 }

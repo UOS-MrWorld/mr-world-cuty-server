@@ -105,14 +105,10 @@ public class TourService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
 
-        return StaffTourDetailResponse.builder()
-                .tour(StaffTourDetailResponse.TourInfo.from(tour))
-                .paidGuestCount(bookingRepository.sumGuestCountByTourIdAndBookingStatus(tourId, BookingStatus.PAID))
-                .bookings(bookingRepository.findAllByTourIdWithCustomer(tourId).stream()
-                        .map(StaffTourDetailResponse.BookingInfo::from)
-                        .toList())
-                .gifts(tour.getTourGifts().stream().map(StaffTourDetailResponse.GiftInfo::from).toList())
-                .build();
+        return StaffTourDetailResponse.of(
+                tour,
+                bookingRepository.sumGuestCountByTourIdAndBookingStatus(tourId, BookingStatus.PAID),
+                bookingRepository.findAllByTourIdWithCustomer(tourId));
     }
 
     // 모집 중인 상품만 수정할 수 있다. 보내지 않은 값은 그대로 두고, gifts를 보내면 기념품 구성 전체를 교체한다.

@@ -1,5 +1,6 @@
 package com.mrworld.yaho.booking.dto;
 
+import com.mrworld.yaho.booking.Booking;
 import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.PaymentStatus;
 import lombok.Builder;
@@ -12,4 +13,12 @@ public class BookingCancelResponse {
     private Long bookingId;
     private BookingStatus bookingStatus;
     private PaymentStatus paymentStatus;
+
+    public static BookingCancelResponse of(Booking booking, PaymentStatus paymentStatus) {
+        return BookingCancelResponse.builder()
+                .bookingId(booking.getBookingId())
+                .bookingStatus(booking.getBookingStatus())
+                .paymentStatus(paymentStatus)
+                .build();
+    }
 }

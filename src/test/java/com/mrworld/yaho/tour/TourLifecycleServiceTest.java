@@ -43,7 +43,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
-class TourCloseTest {
+class TourLifecycleServiceTest {
 
     @Autowired
     private DatabaseCleaner databaseCleaner;

@@ -89,4 +89,13 @@ public class StaffTourDetailResponse {
                     .build();
         }
     }
+
+    public static StaffTourDetailResponse of(Tour tour, int paidGuestCount, List<Booking> bookings) {
+        return StaffTourDetailResponse.builder()
+                .tour(TourInfo.from(tour))
+                .paidGuestCount(paidGuestCount)
+                .bookings(bookings.stream().map(BookingInfo::from).toList())
+                .gifts(tour.getTourGifts().stream().map(GiftInfo::from).toList())
+                .build();
+    }
 }
