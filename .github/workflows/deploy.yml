@@ -1,0 +1,69 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+# 배포가 겹치지 않도록 한 번에 하나씩만 실행
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # 테스트가 통과해야만 배포
+      - name: Test & Build
+        run: ./gradlew test bootJar
+
+      - name: Prepare jar
+        run: cp "$(ls build/libs/*.jar | grep -v plain)" app.jar
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/key.pem
+          chmod 600 ~/.ssh/key.pem
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload jar
+        run: scp -i ~/.ssh/key.pem app.jar "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/opt/cuty/app.jar.new"
+
+      # 새 jar로 교체 후 재시작, 응답이 없으면 이전 jar로 롤백
+      - name: Restart & health check
+        run: |
+          ssh -i ~/.ssh/key.pem "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" 'bash -s' <<'EOF'
+          set -e
+          cd /opt/cuty
+          if [ -f app.jar ]; then cp app.jar app.jar.bak; fi
+          mv app.jar.new app.jar
+          sudo systemctl restart cuty
+
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" localhost:8080/ || true)
+            if [ "$code" != "000" ]; then
+              echo "서버 기동 확인 (HTTP $code)"
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "서버 기동 실패"
+          sudo journalctl -u cuty -n 50 --no-pager
+          if [ -f app.jar.bak ]; then
+            echo "이전 버전으로 롤백"
+            cp app.jar.bak app.jar
+            sudo systemctl restart cuty
+          fi
+          exit 1
+          EOF
