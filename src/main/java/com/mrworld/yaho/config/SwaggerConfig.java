@@ -11,12 +11,10 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
 import java.util.Set;
 
 @Configuration
@@ -31,7 +29,6 @@ public class SwaggerConfig {
         String jwtSchemeName = "JWT";
 
         return new OpenAPI()
-                .servers(List.of(new Server().url("http://localhost:8080")))
                 .components(new Components()
                         .addSecuritySchemes(jwtSchemeName, new SecurityScheme()
                                 .name(jwtSchemeName)
