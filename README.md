@@ -144,3 +144,13 @@ PR을 열거나 `main`에 push하면 GitHub Actions가 같은 테스트를 실�
 ./gradlew build      # 컴파일 + 테스트 + jar 생성 (build/libs/)
 ./gradlew clean      # build/ 폴더 삭제
 ```
+
+## EC2 통합 배포
+
+`main`에 push하면 GitHub Actions의 CD가 서버 테스트와 JAR 빌드를 실행한 뒤 EC2에 배포한다. 이 과정에서 공개 프론트엔드 저장소 `UOS-MrWorld/mr-world-cuty-client`의 `main`도 함께 빌드하고, 결과를 Spring 정적 리소스에 포함한다.
+
+- 프론트 화면과 API는 같은 origin을 사용한다.
+- 프론트 API 기본 경로는 `/api/v1`이다.
+- `/login`, `/tours/**`, `/my-trips` 등 React 주소는 새로고침해도 `index.html`로 전달한다.
+- `/api/v1/customer/**`, `/api/v1/staff/**`와 나머지 API 인증 규칙은 그대로 유지한다.
+- 배포한 서버가 기동하지 않으면 CD가 이전 JAR로 롤백한다.

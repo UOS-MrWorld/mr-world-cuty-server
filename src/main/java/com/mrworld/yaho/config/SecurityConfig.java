@@ -54,7 +54,10 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/v1/customer/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/v1/staff/**").hasRole("STAFF")
-                        .anyRequest().authenticated()
+                        // 위에서 역할별 경로를 먼저 제한하고, 나머지 API도 인증을 유지한다.
+                        // API가 아닌 경로는 같은 서버에서 제공하는 React 화면과 정적 파일이다.
+                        .requestMatchers("/api/v1/**").authenticated()
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtTokenProvider),

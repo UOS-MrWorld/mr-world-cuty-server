@@ -15,6 +15,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+        with:
+          repository: UOS-MrWorld/mr-world-cuty-client
+          ref: main
+          path: frontend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Add frontend to Spring resources
+        run: |
+          mkdir -p src/main/resources/static
+          find src/main/resources/static -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          cp -R frontend/dist/. src/main/resources/static/
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
