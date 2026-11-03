@@ -38,7 +38,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 // 데모 전용. demo 프로필로 실행할 때만 발표에 쓸 회원·투어·예약·결제·재고를 만든다.
-// 계정은 고객 customer / customer (추가 고객 customer2~5, 비밀번호 동일), 직원 staff / staff 이다.
+// 계정은 고객 customer / customer (추가 고객 customer2~5, 비밀번호 동일), 직원 staff / staffstaff 이다.
 // customer2가 있으면 이미 넣은 것으로 보고 다시 만들지 않는다. customer·staff 계정이 먼저 있으면 그 계정을 그대로 쓴다.
 // 날짜는 실행일 기준이고, 모집 중 투어는 발표 전에 마감되지 않도록 멀리 잡는다.
 //
@@ -56,6 +56,7 @@ public class DemoDataInitializer implements ApplicationRunner {
     private static final String CUSTOMER_LOGIN_ID = "customer";
     private static final String SEEDED_MARKER_LOGIN_ID = "customer2";
     private static final String STAFF_LOGIN_ID = "staff";
+    private static final String STAFF_PASSWORD = "staffstaff";
 
     private final MemberRepository memberRepository;
     private final CustomerRepository customerRepository;
@@ -181,7 +182,7 @@ public class DemoDataInitializer implements ApplicationRunner {
             return;
         }
         Member member = memberRepository.save(Member.create(
-                STAFF_LOGIN_ID, passwordEncoder.encode(STAFF_LOGIN_ID), "한직원", phoneNum,
+                STAFF_LOGIN_ID, passwordEncoder.encode(STAFF_PASSWORD), "한직원", phoneNum,
                 "서울특별시 중구 세종대로 110", Role.STAFF));
         staffRepository.save(Staff.create(member));
     }
