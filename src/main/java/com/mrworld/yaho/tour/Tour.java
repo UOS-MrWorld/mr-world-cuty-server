@@ -4,6 +4,8 @@ import com.mrworld.yaho.common.enums.Theme;
 import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.common.exception.BadRequestException;
+import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.inventory.InventoryItem;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -105,12 +107,8 @@ public class Tour {
         tourGifts.add(TourGift.create(this, inventoryItem, quantityPerGuest));
     }
 
-    // HONEYMOON/HEALING은 GRAND 이상만 선택 가능
     public List<TourLevel> availableLevels() {
-        if (theme == Theme.HONEYMOON || theme == Theme.HEALING) {
-            return List.of(TourLevel.GRAND, TourLevel.PREMIUM);
-        }
-        return List.of(TourLevel.values());
+        return theme.getAvailableLevels();
     }
 
     // 시작 7일 전 당일까지는 예약 가능하고, 그 다음 날부터 마감이다.
@@ -118,19 +116,46 @@ public class Tour {
         return today.isAfter(startDate.minusDays(BOOKING_CLOSE_DAYS_BEFORE_START));
     }
 
+    // 모집 중이고 예약 마감 전인 투어만 예약·수정·가격 계산할 수 있다.
+    public void validateBookable(LocalDate today) {
+        if (tourStatus != TourStatus.RECRUITING) {
+            throw new ConflictException("모집 중인 투어가 아닙니다.");
+        }
+        if (isBookingClosed(today)) {
+            throw new BadRequestException("예약 마감 기간이 지난 투어입니다.");
+        }
+    }
+
+    // 모집 중인 상품만 직원이 수정할 수 있다.
+    public void validateUpdatable() {
+        if (tourStatus != TourStatus.RECRUITING) {
+            throw new ConflictException("모집 중인 상품만 수정할 수 있습니다.");
+        }
+    }
+
     // 마감 시점에 결제 인원이 최소 인원 이상이면 확정한다.
     public void confirm() {
+        validateTransitionFrom(TourStatus.RECRUITING);
         this.tourStatus = TourStatus.CONFIRMED;
     }
 
     // 마감 시점에 결제 인원이 최소 인원 미달이면 취소한다.
     public void cancel() {
+        validateTransitionFrom(TourStatus.RECRUITING);
         this.tourStatus = TourStatus.CANCELLED;
     }
 
     // 확정된 투어의 여행 기간이 끝나면 완료 처리한다.
     public void complete() {
+        validateTransitionFrom(TourStatus.CONFIRMED);
         this.tourStatus = TourStatus.COMPLETED;
+    }
+
+    // 상태 전환은 스케줄러와 데모 API가 대상 상태를 확인한 뒤 호출하므로, 어긋나면 프로그램 오류로 본다.
+    private void validateTransitionFrom(TourStatus requiredStatus) {
+        if (tourStatus != requiredStatus) {
+            throw new IllegalStateException(tourStatus + " 상태의 투어는 상태를 전환할 수 없습니다.");
+        }
     }
 
     // 직원의 상품 수정. null인 값은 기존 값을 유지한다.

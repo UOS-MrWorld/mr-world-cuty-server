@@ -5,9 +5,7 @@ import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.dto.PagingRequest;
 import com.mrworld.yaho.common.enums.BookingStatus;
-import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.exception.BadRequestException;
-import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.inventory.InventoryItem;
 import com.mrworld.yaho.inventory.InventoryItemRepository;
@@ -120,9 +118,7 @@ public class TourService {
 
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
-        if (tour.getTourStatus() != TourStatus.RECRUITING) {
-            throw new ConflictException("모집 중인 상품만 수정할 수 있습니다.");
-        }
+        tour.validateUpdatable();
 
         LocalDate startDate = request.getStartDate() != null ? request.getStartDate() : tour.getStartDate();
         LocalDate endDate = request.getEndDate() != null ? request.getEndDate() : tour.getEndDate();

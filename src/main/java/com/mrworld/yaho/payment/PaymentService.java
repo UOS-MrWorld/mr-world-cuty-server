@@ -2,9 +2,7 @@ package com.mrworld.yaho.payment;
 
 import com.mrworld.yaho.booking.Booking;
 import com.mrworld.yaho.booking.BookingRepository;
-import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.PaymentStatus;
-import com.mrworld.yaho.common.exception.BadRequestException;
 import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.ForbiddenException;
 import com.mrworld.yaho.common.exception.NotFoundException;
@@ -40,15 +38,10 @@ public class PaymentService {
         if (paymentRepository.existsByBookingBookingIdAndPaymentStatus(booking.getBookingId(), PaymentStatus.SUCCESS)) {
             throw new ConflictException("이미 결제가 완료된 예약입니다.");
         }
-        if (booking.getBookingStatus() != BookingStatus.PENDING) {
-            throw new BadRequestException("결제할 수 없는 예약입니다.");
-        }
-        if (booking.getTour().isBookingClosed(LocalDate.now())) {
-            throw new BadRequestException("결제 마감 기간이 지난 투어입니다.");
-        }
+        booking.validatePayable(LocalDate.now());
 
         int discountRate = booking.getCustomer().currentDiscountRate();
-        int amount = booking.getTotalPrice() * (100 - discountRate) / 100;
+        int amount = Booking.calculatePaymentAmount(booking.getTotalPrice(), discountRate);
 
         if (!APPROVED_CARD_NUMBER.equals(request.getCardNumber())) {
             return PaymentResponse.from(paymentRepository.save(Payment.failed(booking, amount)));

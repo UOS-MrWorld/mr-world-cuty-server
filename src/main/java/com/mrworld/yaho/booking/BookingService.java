@@ -13,13 +13,10 @@ import com.mrworld.yaho.booking.dto.QuoteResponse;
 import com.mrworld.yaho.booking.dto.TravelHistoryResponse;
 import com.mrworld.yaho.common.dto.PageResponse;
 import com.mrworld.yaho.common.dto.PagingRequest;
-import com.mrworld.yaho.common.enums.BookingStatus;
 import com.mrworld.yaho.common.enums.PaymentStatus;
 import com.mrworld.yaho.common.enums.Theme;
-import com.mrworld.yaho.common.enums.TourStatus;
 import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.common.exception.BadRequestException;
-import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.common.exception.ForbiddenException;
 import com.mrworld.yaho.common.exception.NotFoundException;
 import com.mrworld.yaho.customer.Customer;
@@ -54,7 +51,6 @@ public class BookingService {
     private static final Sort BOOKING_LIST_SORT = Sort.by(Sort.Direction.DESC, "createdAt", "bookingId");
     private static final Sort TRAVEL_HISTORY_SORT = Sort.by(Sort.Direction.DESC, "tour.startDate", "bookingId");
 
-    private static final int HONEYMOON_GUEST_COUNT = 2;
     private static final int CAR_2_MAX_GUEST_COUNT = 2;
 
     private final TourRepository tourRepository;
@@ -125,9 +121,7 @@ public class BookingService {
         }
 
         Booking booking = findMyBooking(customerId, bookingId);
-        if (booking.getBookingStatus() != BookingStatus.PENDING) {
-            throw new ConflictException("결제 전 예약만 수정할 수 있습니다.");
-        }
+        booking.validateUpdatable();
 
         Tour tour = findBookableTour(booking.getTour().getTourId());
         QuoteRequest merged = mergeOptions(booking, request);
@@ -156,15 +150,10 @@ public class BookingService {
     @Transactional
     public BookingCancelResponse cancelBooking(Long customerId, Long bookingId) {
         Booking booking = findMyBooking(customerId, bookingId);
-        if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
-            throw new BadRequestException("이미 취소된 예약입니다.");
-        }
-        if (booking.getTour().isBookingClosed(LocalDate.now())) {
-            throw new BadRequestException("취소 마감 기간이 지난 투어입니다.");
-        }
+        booking.validateCancellable(LocalDate.now());
 
         PaymentStatus paymentStatus = null;
-        if (booking.getBookingStatus() == BookingStatus.PAID) {
+        if (booking.isPaid()) {
             paymentService.refund(booking);
             paymentStatus = PaymentStatus.REFUNDED;
         }
@@ -223,12 +212,7 @@ public class BookingService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 투어입니다."));
 
-        if (tour.getTourStatus() != TourStatus.RECRUITING) {
-            throw new ConflictException("모집 중인 투어가 아닙니다.");
-        }
-        if (tour.isBookingClosed(LocalDate.now())) {
-            throw new BadRequestException("예약 마감 기간이 지난 투어입니다.");
-        }
+        tour.validateBookable(LocalDate.now());
         return tour;
     }
 
@@ -238,8 +222,10 @@ public class BookingService {
         }
 
         int guestCount = request.getGuestCount();
-        if (tour.getTheme() == Theme.HONEYMOON && guestCount != HONEYMOON_GUEST_COUNT) {
-            throw new BadRequestException("허니문 투어는 2명만 예약할 수 있습니다.");
+        Theme theme = tour.getTheme();
+        if (!theme.allowsGuestCount(guestCount)) {
+            throw new BadRequestException(
+                    theme.getLabel() + " 투어는 " + theme.getFixedGuestCount() + "명만 예약할 수 있습니다.");
         }
         if (request.getTransport() == Transport.PREMIUM_CAR_2 && guestCount > CAR_2_MAX_GUEST_COUNT) {
             throw new BadRequestException("2인 차량은 3명 이상 예약에 선택할 수 없습니다.");
