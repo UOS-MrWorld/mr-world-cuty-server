@@ -3,7 +3,6 @@ package com.mrworld.yaho.demo;
 import com.mrworld.yaho.booking.Booking;
 import com.mrworld.yaho.booking.BookingRepository;
 import com.mrworld.yaho.common.enums.HotelGrade;
-import com.mrworld.yaho.common.enums.LoyaltyGrade;
 import com.mrworld.yaho.common.enums.MealType;
 import com.mrworld.yaho.common.enums.Role;
 import com.mrworld.yaho.common.enums.Theme;
@@ -11,11 +10,21 @@ import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.Transport;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.customer.CustomerRepository;
+import com.mrworld.yaho.inventory.InventoryItem;
+import com.mrworld.yaho.inventory.InventoryItemRepository;
 import com.mrworld.yaho.member.Member;
 import com.mrworld.yaho.member.MemberRepository;
+import com.mrworld.yaho.member.Staff;
+import com.mrworld.yaho.member.StaffRepository;
+import com.mrworld.yaho.payment.Payment;
+import com.mrworld.yaho.payment.PaymentRepository;
+import com.mrworld.yaho.tour.DrinkOption;
+import com.mrworld.yaho.tour.DrinkOptionInitializer;
+import com.mrworld.yaho.tour.DrinkOptionRepository;
 import com.mrworld.yaho.tour.Tour;
 import com.mrworld.yaho.tour.TourRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -25,53 +34,235 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
-// 데모 전용. demo 프로필로 실행할 때만, 완료 여행 5번을 채운 VIP 고객(할인 미적용)을 만든다.
-// 비밀번호는 환경변수 DEMO_PASSWORD로 받는다. 이미 있으면 다시 만들지 않는다.
+// 데모 전용. demo 프로필로 실행할 때만 발표에 쓸 회원·투어·예약·결제·재고를 만든다.
+// 계정은 고객 customer / customer (추가 고객 customer2~5, 비밀번호 동일), 직원 staff / staff 이다.
+// customer2가 있으면 이미 넣은 것으로 보고 다시 만들지 않는다. customer·staff 계정이 먼저 있으면 그 계정을 그대로 쓴다.
+// 날짜는 실행일 기준이고, 모집 중 투어는 발표 전에 마감되지 않도록 멀리 잡는다.
+//
+// 발표 시나리오
+// - 단골 할인: customer는 완료 5회 VIP이고 할인 미적용. 직원이 VIP 일괄 적용하면 이후 결제부터 10% 할인된다.
+// - 확정 문자: 나트랑은 결제 2명. customer의 결제 전 예약 1명을 결제한 뒤 마감하면 3명이 되어 확정된다.
+// - 미달 취소: 세부는 결제 2명뿐이라 마감하면 취소·환불된다.
+// - 등급 상승: customer3은 완료 4회. 다낭을 완료 처리하면 5회가 되어 VIP가 된다.
+@Slf4j
 @Component
 @Profile("demo")
 @RequiredArgsConstructor
 public class DemoDataInitializer implements ApplicationRunner {
 
-    private static final String VIP_LOGIN_ID = "demo-vip";
+    private static final String CUSTOMER_LOGIN_ID = "customer";
+    private static final String SEEDED_MARKER_LOGIN_ID = "customer2";
+    private static final String STAFF_LOGIN_ID = "staff";
 
     private final MemberRepository memberRepository;
     private final CustomerRepository customerRepository;
+    private final StaffRepository staffRepository;
     private final TourRepository tourRepository;
     private final BookingRepository bookingRepository;
+    private final PaymentRepository paymentRepository;
+    private final InventoryItemRepository inventoryItemRepository;
+    private final DrinkOptionRepository drinkOptionRepository;
+    private final DrinkOptionInitializer drinkOptionInitializer;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${demo.password}")
-    private String password;
-
+    // 확정 문자가 실제로 나갈 수 있어, 모든 데모 회원의 번호를 이 값 하나로 둔다.
     @Value("${demo.phone-num:01000000000}")
     private String phoneNum;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (memberRepository.existsByLoginId(VIP_LOGIN_ID)) {
+        if (memberRepository.existsByLoginId(SEEDED_MARKER_LOGIN_ID)) {
+            log.info("데모 데이터가 이미 있어 다시 만들지 않습니다.");
             return;
         }
 
-        Member member = memberRepository.save(Member.create(
-                VIP_LOGIN_ID, passwordEncoder.encode(password), "데모단골", phoneNum, "서울", Role.CUSTOMER));
-        Customer customer = customerRepository.save(Customer.create(member));
+        // 러너 실행 순서는 정해져 있지 않아, 음료 옵션을 쓰기 전에 먼저 채워 둔다.
+        drinkOptionInitializer.run(args);
+        List<DrinkOption> drinkOptions = drinkOptionRepository.findAll();
+        DrinkOption coffee = drinkOptions.get(0);
+        DrinkOption champagne = drinkOptions.get(1);
 
-        int completedCount = LoyaltyGrade.VIP.getRequiredTourCount();
-        for (int i = 1; i <= completedCount; i++) {
-            LocalDate startDate = LocalDate.now().minusMonths(i);
-            Tour tour = Tour.create(Theme.GOLF, "[데모] 지난 여행 " + i, null,
-                    startDate, startDate.plusDays(3), 1_000_000, Transport.PREMIUM_VAN_10);
+        createStaffIfAbsent();
+        Customer customer = findOrCreateCustomer(CUSTOMER_LOGIN_ID, "김민준", "서울특별시 동대문구 서울시립대로 163");
+        Customer customer2 = findOrCreateCustomer(SEEDED_MARKER_LOGIN_ID, "이서연", "서울특별시 강남구 테헤란로 152");
+        Customer customer3 = findOrCreateCustomer("customer3", "박지호", "부산광역시 해운대구 센텀중앙로 79");
+        Customer customer4 = findOrCreateCustomer("customer4", "최수아", "대전광역시 유성구 대학로 99");
+        findOrCreateCustomer("customer5", "정우진", "제주특별자치도 제주시 첨단로 242");
+
+        InventoryItem pouch = findOrCreateItem("여행용 파우치", 200);
+        InventoryItem golfBall = findOrCreateItem("골프공 세트", 80);
+        InventoryItem socks = findOrCreateItem("트레킹 양말", 120);
+        InventoryItem aromaOil = findOrCreateItem("아로마 오일 세트", 40);
+        InventoryItem mug = findOrCreateItem("커플 머그컵", 5);
+
+        LocalDate today = LocalDate.now();
+
+        // 지난 여행
+        Tour okinawa = createTour(Theme.GOLF, "오키나와 골프 3박 4일", "에메랄드 바다를 끼고 도는 명문 코스 3라운드",
+                today.minusDays(170), 3, 1_190_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+        Tour jeju = createTour(Theme.TREKKING, "제주 올레길 트레킹 2박 3일", "올레 7코스와 한라산 영실 코스를 걷는 일정",
+                today.minusDays(140), 2, 590_000, Transport.PREMIUM_VAN_10, pouch, socks);
+        Tour bali = createTour(Theme.HEALING, "발리 우붓 힐링 4박 5일", "우붓 정글 리조트에서 요가와 스파로 쉬는 일정",
+                today.minusDays(105), 4, 1_490_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
+        Tour hokkaido = createTour(Theme.TREKKING, "홋카이도 대설산 트레킹 4박 5일", "다이세쓰산 능선과 온천을 함께 즐기는 일정",
+                today.minusDays(70), 4, 1_290_000, Transport.PREMIUM_VAN_10, pouch, socks);
+        Tour maldives = createTour(Theme.HONEYMOON, "몰디브 허니문 5박 6일", "수상 빌라에서 보내는 둘만의 시간",
+                today.minusDays(35), 5, 3_290_000, Transport.PREMIUM_CAR_2, pouch, mug);
+        for (Tour tour : List.of(okinawa, jeju, bali, hokkaido, maldives)) {
             tour.confirm();
             tour.complete();
-            tourRepository.save(tour);
-
-            Booking booking = Booking.create(tour, customer, TourLevel.CLASSIC, 1,
-                    HotelGrade.THREE_STAR, MealType.LUNCH_BOX, Transport.PREMIUM_VAN_10, 1_000_000, 0);
-            booking.pay(0);
-            bookingRepository.save(booking);
         }
-        customer.updateLoyaltyGrade(completedCount);
+        Tour hanoi = createTour(Theme.GOLF, "하노이 골프 3박 4일", "인원 미달로 취소된 일정",
+                today.minusDays(20), 3, 890_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+        hanoi.cancel();
+
+        pay(book(okinawa, customer, TourLevel.GRAND, 2));
+        pay(book(jeju, customer, TourLevel.CLASSIC, 2));
+        pay(book(bali, customer, TourLevel.PREMIUM, 2, champagne, 2));
+        pay(book(hokkaido, customer, TourLevel.GRAND, 2));
+        pay(book(maldives, customer, TourLevel.PREMIUM, 2, champagne, 1));
+
+        pay(book(okinawa, customer2, TourLevel.PREMIUM, 2));
+        pay(book(jeju, customer2, TourLevel.GRAND, 4, coffee, 4));
+        pay(book(bali, customer2, TourLevel.GRAND, 2));
+        pay(book(hokkaido, customer2, TourLevel.PREMIUM, 3));
+        pay(book(maldives, customer2, TourLevel.GRAND, 2));
+
+        pay(book(okinawa, customer3, TourLevel.CLASSIC, 1));
+        pay(book(jeju, customer3, TourLevel.CLASSIC, 1));
+        pay(book(bali, customer3, TourLevel.GRAND, 1));
+        pay(book(hokkaido, customer3, TourLevel.CLASSIC, 1));
+
+        pay(book(jeju, customer4, TourLevel.GRAND, 2));
+        refund(book(hanoi, customer4, TourLevel.CLASSIC, 2));
+
+        updateLoyaltyGrade(customer);
+        updateLoyaltyGrade(customer2);
+        updateLoyaltyGrade(customer3);
+        updateLoyaltyGrade(customer4);
+        customer2.activateDiscount(LocalDateTime.now().minusDays(7));
+
+        // 확정된 투어
+        Tour danang = createTour(Theme.GOLF, "다낭 골프 4박 5일", "바나 힐스와 몽고메리 링크스를 도는 일정",
+                today.plusDays(45), 4, 1_390_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+        danang.confirm();
+        pay(book(danang, customer, TourLevel.GRAND, 2));
+        pay(book(danang, customer2, TourLevel.PREMIUM, 2, champagne, 1));
+        pay(book(danang, customer3, TourLevel.CLASSIC, 1));
+
+        // 모집 중인 투어
+        Tour nhaTrang = createTour(Theme.HEALING, "나트랑 힐링 리조트 4박 5일", "머드 스파와 프라이빗 비치로 쉬어 가는 일정",
+                today.plusDays(60), 4, 1_590_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
+        pay(book(nhaTrang, customer2, TourLevel.PREMIUM, 2, coffee, 2));
+        book(nhaTrang, customer, TourLevel.GRAND, 1);
+
+        Tour cebu = createTour(Theme.HONEYMOON, "세부 허니문 5박 6일", "막탄 섬 리조트와 호핑 투어를 즐기는 일정",
+                today.plusDays(75), 5, 2_490_000, Transport.PREMIUM_CAR_2, pouch, mug);
+        pay(book(cebu, customer4, TourLevel.GRAND, 2));
+
+        Tour chiangMai = createTour(Theme.GOLF, "치앙마이 골프 3박 5일", "선선한 고산 기후에서 즐기는 라운드",
+                today.plusDays(90), 3, 1_090_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+        refund(book(chiangMai, customer3, TourLevel.CLASSIC, 2));
+
+        createTour(Theme.TREKKING, "안나푸르나 베이스캠프 트레킹 9박 10일", "포카라에서 출발해 해발 4,130m까지 오르는 일정",
+                today.plusDays(105), 9, 2_190_000, Transport.PREMIUM_VAN_10, pouch, socks);
+        createTour(Theme.HONEYMOON, "하와이 허니문 6박 7일", "오아후와 마우이를 함께 둘러보는 일정",
+                today.plusDays(120), 6, 3_590_000, Transport.PREMIUM_CAR_2, pouch, mug);
+        createTour(Theme.HEALING, "교토 료칸 힐링 3박 4일", "단풍 정원과 온천 료칸에서 머무는 일정",
+                today.plusDays(135), 3, 1_290_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
+    }
+
+    private void createStaffIfAbsent() {
+        if (memberRepository.existsByLoginId(STAFF_LOGIN_ID)) {
+            return;
+        }
+        Member member = memberRepository.save(Member.create(
+                STAFF_LOGIN_ID, passwordEncoder.encode(STAFF_LOGIN_ID), "한직원", phoneNum,
+                "서울특별시 중구 세종대로 110", Role.STAFF));
+        staffRepository.save(Staff.create(member));
+    }
+
+    private Customer findOrCreateCustomer(String loginId, String name, String address) {
+        return memberRepository.findByLoginId(loginId)
+                .map(member -> customerRepository.findById(member.getMemberId()).orElseThrow())
+                .orElseGet(() -> {
+                    Member member = memberRepository.save(Member.create(
+                            loginId, passwordEncoder.encode(CUSTOMER_LOGIN_ID), name, phoneNum, address, Role.CUSTOMER));
+                    return customerRepository.save(Customer.create(member));
+                });
+    }
+
+    // 물품명은 유일해야 하므로, 직원이 이미 등록한 물품은 그대로 쓴다.
+    private InventoryItem findOrCreateItem(String itemName, int quantity) {
+        return inventoryItemRepository.findAll().stream()
+                .filter(item -> item.getItemName().equals(itemName))
+                .findFirst()
+                .orElseGet(() -> inventoryItemRepository.save(InventoryItem.create(itemName, quantity)));
+    }
+
+    private Tour createTour(Theme theme, String tourName, String description, LocalDate startDate, int nights,
+                            int price, Transport defaultTransport, InventoryItem... gifts) {
+        Tour tour = Tour.create(theme, tourName, description, startDate, startDate.plusDays(nights),
+                price, defaultTransport);
+        for (InventoryItem gift : gifts) {
+            tour.addGift(gift, 1);
+        }
+        return tourRepository.save(tour);
+    }
+
+    private Booking book(Tour tour, Customer customer, TourLevel tourLevel, int guestCount) {
+        return book(tour, customer, tourLevel, guestCount, null, 0);
+    }
+
+    // 호텔·식사는 투어 등급의 기본 구성을 쓰고, 금액은 BookingService와 같은 식으로 계산한다.
+    private Booking book(Tour tour, Customer customer, TourLevel tourLevel, int guestCount,
+                         DrinkOption drinkOption, int drinkQuantity) {
+        HotelGrade hotelGrade = switch (tourLevel) {
+            case CLASSIC -> HotelGrade.THREE_STAR;
+            case GRAND -> HotelGrade.FOUR_STAR;
+            case PREMIUM -> HotelGrade.FIVE_STAR;
+        };
+        MealType mealType = switch (tourLevel) {
+            case CLASSIC -> MealType.LUNCH_BOX;
+            case GRAND -> MealType.LOCAL_RESTAURANT;
+            case PREMIUM -> MealType.FINE_DINING;
+        };
+        Transport transport = tour.getDefaultTransport();
+
+        int perGuestPrice = tour.getPrice() + hotelGrade.getPrice() + mealType.getPrice() + transport.getPrice();
+        int drinkPrice = drinkOption != null ? drinkOption.getDrinkPrice() * drinkQuantity : 0;
+
+        Booking booking = Booking.create(tour, customer, tourLevel, guestCount, hotelGrade, mealType, transport,
+                perGuestPrice * guestCount + drinkPrice, customer.currentDiscountRate());
+        if (drinkOption != null) {
+            booking.addDrinkOption(drinkOption, drinkQuantity);
+        }
+        return bookingRepository.save(booking);
+    }
+
+    private Payment pay(Booking booking) {
+        booking.pay(booking.getCustomer().currentDiscountRate());
+
+        // 출발 30일 전에 결제한 것으로 두되, 미래 시각은 되지 않게 한다.
+        LocalDate paidDate = booking.getTour().getStartDate().minusDays(30);
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDateTime paidAt = (paidDate.isAfter(yesterday) ? yesterday : paidDate).atTime(10, 0);
+
+        return paymentRepository.save(Payment.success(booking, booking.expectedPaymentAmount(), paidAt));
+    }
+
+    private void refund(Booking booking) {
+        pay(booking).refund();
+        booking.cancel();
+    }
+
+    private void updateLoyaltyGrade(Customer customer) {
+        // 등급 계산 쿼리 전에 투어·예약 상태 변경을 DB에 내보낸다.
+        bookingRepository.flush();
+        customer.updateLoyaltyGrade(bookingRepository.countCompletedToursByCustomerId(customer.getMemberId()));
     }
 }
