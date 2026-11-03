@@ -3,6 +3,7 @@ name: CD
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 # 배포가 겹치지 않도록 한 번에 하나씩만 실행
 concurrency:
