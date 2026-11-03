@@ -5,6 +5,8 @@ import com.mrworld.yaho.common.enums.HotelGrade;
 import com.mrworld.yaho.common.enums.MealType;
 import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.Transport;
+import com.mrworld.yaho.common.exception.BadRequestException;
+import com.mrworld.yaho.common.exception.ConflictException;
 import com.mrworld.yaho.customer.Customer;
 import com.mrworld.yaho.tour.DrinkOption;
 import com.mrworld.yaho.tour.Tour;
@@ -23,6 +25,7 @@ import jakarta.persistence.OneToMany;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,6 +128,7 @@ public class Booking {
             Transport transport,
             int totalPrice
     ) {
+        validateUpdatable();
         this.tourLevel = tourLevel;
         this.guestCount = guestCount;
         this.hotelGrade = hotelGrade;
@@ -135,12 +139,53 @@ public class Booking {
 
     // 결제 성공 시 결제 완료로 바꾸고, 결제에 적용한 할인율을 저장한다.
     public void pay(int discountRate) {
+        validatePending();
         this.discountRate = discountRate;
         this.bookingStatus = BookingStatus.PAID;
     }
 
     public void cancel() {
+        validateNotCancelled();
         this.bookingStatus = BookingStatus.CANCELLED;
+    }
+
+    public boolean isPaid() {
+        return bookingStatus == BookingStatus.PAID;
+    }
+
+    // 결제 전(PENDING) 예약만 옵션을 수정할 수 있다.
+    public void validateUpdatable() {
+        if (bookingStatus != BookingStatus.PENDING) {
+            throw new ConflictException("결제 전 예약만 수정할 수 있습니다.");
+        }
+    }
+
+    // 결제 전(PENDING) 예약이고 예약 마감 전일 때만 결제할 수 있다.
+    public void validatePayable(LocalDate today) {
+        validatePending();
+        if (tour.isBookingClosed(today)) {
+            throw new BadRequestException("결제 마감 기간이 지난 투어입니다.");
+        }
+    }
+
+    // 고객은 아직 취소되지 않은 예약을 예약 마감 전까지 취소할 수 있다.
+    public void validateCancellable(LocalDate today) {
+        validateNotCancelled();
+        if (tour.isBookingClosed(today)) {
+            throw new BadRequestException("취소 마감 기간이 지난 투어입니다.");
+        }
+    }
+
+    private void validatePending() {
+        if (bookingStatus != BookingStatus.PENDING) {
+            throw new BadRequestException("결제할 수 없는 예약입니다.");
+        }
+    }
+
+    private void validateNotCancelled() {
+        if (bookingStatus == BookingStatus.CANCELLED) {
+            throw new BadRequestException("이미 취소된 예약입니다.");
+        }
     }
 
     public void clearDrinkOptions() {
@@ -151,8 +196,13 @@ public class Booking {
         return customer.getMemberId().equals(customerId);
     }
 
-    // 결제 금액 = totalPrice × (100 - discountRate) / 100
+    // 예약에 저장된 금액과 할인율로 계산한 결제 금액
     public int expectedPaymentAmount() {
+        return calculatePaymentAmount(totalPrice, discountRate);
+    }
+
+    // 결제 금액 = totalPrice × (100 - discountRate) / 100
+    public static int calculatePaymentAmount(int totalPrice, int discountRate) {
         return totalPrice * (100 - discountRate) / 100;
     }
 }
