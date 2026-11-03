@@ -61,10 +61,10 @@ class DemoDataInitializerTest {
     private TourLifecycleService tourLifecycleService;
 
     @Test
-    void 고객과_직원은_아이디와_같은_비밀번호로_로그인한다() {
+    void 고객과_직원은_데모_비밀번호로_로그인한다() {
         assertThat(authService.login(loginRequest("customer", "customer")).getAccessToken()).isNotBlank();
         assertThat(authService.login(loginRequest("customer5", "customer")).getAccessToken()).isNotBlank();
-        assertThat(authService.login(loginRequest("staff", "staff")).getAccessToken()).isNotBlank();
+        assertThat(authService.login(loginRequest("staff", "staffstaff")).getAccessToken()).isNotBlank();
         assertThat(staffRepository.existsById(findMember("staff").getMemberId())).isTrue();
     }
 
