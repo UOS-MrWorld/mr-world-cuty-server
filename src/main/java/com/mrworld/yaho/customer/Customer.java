@@ -56,8 +56,8 @@ public class Customer {
         this.loyaltyGrade = loyaltyGrade;
     }
 
-    // 할인율은 별도 활성화 상태 없이 현재 단골 등급에서 바로 결정한다.
+    // 할인 적용이 활성화된 고객에게만 단골 등급 할인율을 적용한다.
     public int currentDiscountRate() {
-        return loyaltyGrade.getDiscountRate();
+        return legacyDiscountApplied ? loyaltyGrade.getDiscountRate() : 0;
     }
 }

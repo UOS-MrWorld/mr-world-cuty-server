@@ -113,9 +113,7 @@ class BookingServiceTest {
     void 할인이_적용되지_않은_고객은_할인율이_0이다() {
         when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Theme.GOLF)));
         Customer customer = Customer.create(member(7L));
-        // 현재 할인 정책은 고객의 저장된 단골 등급에서 바로 할인율을 계산한다.
-        // 할인 미적용 고객은 NORMAL 등급이어야 한다.
-        ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.NORMAL);
+        ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
         when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
 
         QuoteResponse response = bookingService.getQuote(
