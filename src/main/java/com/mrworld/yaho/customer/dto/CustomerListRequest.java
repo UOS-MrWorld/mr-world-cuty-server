@@ -14,5 +14,4 @@ public class CustomerListRequest extends PagingRequest {
 
     private LoyaltyGrade loyaltyGrade;
 
-    private Boolean discountApplied;
 }

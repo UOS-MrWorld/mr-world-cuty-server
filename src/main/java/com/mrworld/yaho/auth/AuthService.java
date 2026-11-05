@@ -107,7 +107,7 @@ public class AuthService {
             );
         }
 
-        return LoginResponse.of(member, accessToken, refreshToken);
+        return LoginResponse.of(member, accessToken, refreshToken, jwtTokenProvider.getExpiresAt(accessToken));
     }
 
     public TokenResponse refresh(String refreshToken) {
@@ -116,7 +116,8 @@ public class AuthService {
         Member member = memberRepository.findById(savedToken.getMemberId())
                 .orElseThrow(() -> new AuthenticationFailedException(INVALID_REFRESH_TOKEN));
 
-        return TokenResponse.of(jwtTokenProvider.createToken(member.getMemberId(), member.getRole()));
+        String accessToken = jwtTokenProvider.createToken(member.getMemberId(), member.getRole());
+        return TokenResponse.of(accessToken, jwtTokenProvider.getExpiresAt(accessToken));
     }
 
     @Transactional

@@ -53,6 +53,11 @@ public class Customer {
         this.loyaltyGrade = LoyaltyGrade.of(completedTourCount);
     }
 
+    // 직원 화면의 일괄 저장은 등급을 직접 지정하되, 기존 자동 산정 규칙은 유지한다.
+    public void updateLoyaltyGrade(LoyaltyGrade loyaltyGrade) {
+        this.loyaltyGrade = loyaltyGrade;
+    }
+
     // 직원이 단골 할인을 켠다. 이후 예약·결제에 등급 할인율이 적용된다.
     public void activateDiscount(LocalDateTime appliedAt) {
         this.loyaltyDiscountApplied = true;
