@@ -35,29 +35,37 @@ public class Customer {
     @Column(nullable = false)
     private LoyaltyGrade loyaltyGrade;
 
-    // 기존 운영 DB의 NOT NULL 컬럼을 안전하게 유지하기 위한 호환 필드다.
-    // 할인 판단에는 사용하지 않으며, 스키마 마이그레이션 뒤 제거한다.
-    @Column(name = "loyalty_discount_applied", nullable = false)
-    private boolean legacyDiscountApplied;
+    @Column(nullable = false)
+    private boolean loyaltyDiscountApplied;
 
-    @Column(name = "loyalty_discount_applied_at")
-    private LocalDateTime legacyDiscountAppliedAt;
+    private LocalDateTime loyaltyDiscountAppliedAt;
 
     public static Customer create(Member member) {
         return Customer.builder()
                 .member(member)
                 .loyaltyGrade(LoyaltyGrade.NORMAL)
-                .legacyDiscountApplied(false)
+                .loyaltyDiscountApplied(false)
                 .build();
     }
 
-    // 단골 등급은 직원의 명시적인 일괄 저장으로만 바뀐다.
+    // 완료 여행 횟수로 등급을 다시 정한다. 할인 적용 여부는 직원이 등급별 일괄 적용으로 따로 켠다.
+    public void updateLoyaltyGrade(int completedTourCount) {
+        this.loyaltyGrade = LoyaltyGrade.of(completedTourCount);
+    }
+
+    // 직원 화면의 일괄 저장은 등급을 직접 지정하되, 기존 자동 산정 규칙은 유지한다.
     public void updateLoyaltyGrade(LoyaltyGrade loyaltyGrade) {
         this.loyaltyGrade = loyaltyGrade;
     }
 
-    // 할인 적용이 활성화된 고객에게만 단골 등급 할인율을 적용한다.
+    // 직원이 단골 할인을 켠다. 이후 예약·결제에 등급 할인율이 적용된다.
+    public void activateDiscount(LocalDateTime appliedAt) {
+        this.loyaltyDiscountApplied = true;
+        this.loyaltyDiscountAppliedAt = appliedAt;
+    }
+
+    // 직원이 할인을 적용한 고객만 등급 할인율을 받는다.
     public int currentDiscountRate() {
-        return legacyDiscountApplied ? loyaltyGrade.getDiscountRate() : 0;
+        return loyaltyDiscountApplied ? loyaltyGrade.getDiscountRate() : 0;
     }
 }

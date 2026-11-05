@@ -99,6 +99,7 @@ class BookingServiceTest {
         when(tourRepository.findById(1L)).thenReturn(Optional.of(openTour(Theme.GOLF)));
         Customer customer = Customer.create(member(7L));
         ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
+        ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
         when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
 
         QuoteResponse response = bookingService.getQuote(
@@ -205,6 +206,7 @@ class BookingServiceTest {
         when(tourRepository.findById(1L)).thenReturn(Optional.of(tour));
         Customer customer = Customer.create(member(7L));
         ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
+        ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
         when(customerRepository.findById(7L)).thenReturn(Optional.of(customer));
         when(drinkOptionRepository.findAllById(List.of(3L))).thenReturn(List.of(drinkOption(3L, 5_000)));
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {

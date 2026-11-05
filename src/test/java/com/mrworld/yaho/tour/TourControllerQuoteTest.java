@@ -107,6 +107,7 @@ class TourControllerQuoteTest {
                 "vip-" + java.util.UUID.randomUUID(), "pw", "단골", "010-0000-0000", "서울", Role.CUSTOMER));
         Customer customer = Customer.create(member);
         ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
+        ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
         customerRepository.save(customer);
 
         mockMvc.perform(post(quoteUrl(golfTour.getTourId()))

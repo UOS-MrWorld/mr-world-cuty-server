@@ -51,7 +51,7 @@ public class TourLifecycleService {
         processEachTour(tourIds, this::closeTour, "투어 마감 처리 실패");
     }
 
-    // 여행 기간이 끝난 확정 투어를 완료 처리한다. 단골 등급은 직원이 별도로 일괄 변경한다.
+    // 여행 기간이 끝난 확정 투어를 완료 처리하고, 참가 고객의 단골 등급을 완료 여행 횟수로 다시 정한다.
     // TourScheduler가 매일 호출하며, 마감 처리와 같이 투어마다 별도 트랜잭션으로 처리한다.
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void completeEndedTours() {
@@ -76,12 +76,22 @@ public class TourLifecycleService {
         }
     }
 
+    // 데모 API(DemoService)에서도 호출하므로 public으로 연다.
     @Transactional
     public void completeTour(Long tourId) {
         Tour tour = tourRepository.findById(tourId).orElseThrow();
         tour.complete();
+
+        // 완료 처리가 반영된 뒤 횟수를 세도록, 등급 계산 쿼리 전에 상태 변경을 DB에 내보낸다.
+        tourRepository.flush();
+        bookingRepository.findAllByTourIdAndBookingStatus(tourId, BookingStatus.PAID).stream()
+                .map(Booking::getCustomer)
+                .distinct()
+                .forEach(customer -> customer.updateLoyaltyGrade(
+                        bookingRepository.countCompletedToursByCustomerId(customer.getMemberId())));
     }
 
+    // 데모 API(DemoService)에서도 호출하므로 public으로 연다.
     @Transactional
     public void closeTour(Long tourId) {
         Tour tour = tourRepository.findById(tourId).orElseThrow();
