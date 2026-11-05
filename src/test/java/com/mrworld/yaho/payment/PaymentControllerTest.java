@@ -116,7 +116,6 @@ class PaymentControllerTest {
         // 예약할 때는 할인이 없었고, 결제 전에 VIP 할인(10%)이 적용된 고객
         Booking booking = savePendingBooking(customer);
         ReflectionTestUtils.setField(customer, "loyaltyGrade", LoyaltyGrade.VIP);
-        ReflectionTestUtils.setField(customer, "loyaltyDiscountApplied", true);
         customerRepository.save(customer);
 
         mockMvc.perform(post(URL)

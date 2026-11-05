@@ -5,6 +5,8 @@ import com.mrworld.yaho.member.Member;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
+
 // 로그인 결과. tokenType은 항상 "Bearer"다.
 @Getter
 @Builder
@@ -17,8 +19,9 @@ public class LoginResponse {
     private String accessToken;
     private String refreshToken;
     private String tokenType;
+    private LocalDateTime accessTokenExpiresAt;
 
-    public static LoginResponse of(Member member, String accessToken, String refreshToken) {
+    public static LoginResponse of(Member member, String accessToken, String refreshToken, LocalDateTime accessTokenExpiresAt) {
         return LoginResponse.builder()
                 .memberId(member.getMemberId())
                 .memberName(member.getName())
@@ -26,6 +29,7 @@ public class LoginResponse {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType(TOKEN_TYPE)
+                .accessTokenExpiresAt(accessTokenExpiresAt)
                 .build();
     }
 }

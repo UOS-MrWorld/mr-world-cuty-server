@@ -6,6 +6,7 @@ import com.mrworld.yaho.common.enums.TourLevel;
 import com.mrworld.yaho.common.enums.Transport;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -43,6 +44,7 @@ public class QuoteRequest {
 
         @NotNull(message = "음료 수량은 필수입니다.")
         @Min(value = 1, message = "음료 수량은 1 이상이어야 합니다.")
+        @Max(value = 100, message = "음료 수량은 100 이하여야 합니다.")
         private Integer quantity;
     }
 }

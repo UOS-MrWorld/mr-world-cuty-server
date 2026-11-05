@@ -164,9 +164,10 @@ class TourLifecycleServiceTest {
     }
 
     @Test
-    void 여행이_끝난_확정_투어는_완료되고_완료_횟수로_단골_등급을_정한다() {
+    void 여행이_끝난_확정_투어는_완료되지만_직원이_정한_단골_등급은_바꾸지_않는다() {
         Customer customer = saveCustomer("01011112222");
-        // 이미 완료된 여행 4번 + 이번에 끝난 여행 1번 = 5번 → VIP
+        customer.updateLoyaltyGrade(LoyaltyGrade.VIP);
+        customerRepository.save(customer);
         for (int i = 0; i < 4; i++) {
             Tour past = saveEndedTour(TourStatus.COMPLETED, 10 + i);
             savePaidBooking(past, customer, 1);
@@ -183,20 +184,7 @@ class TourLifecycleServiceTest {
                 .isEqualTo(TourStatus.CONFIRMED);
         Customer updated = customerRepository.findById(customer.getMemberId()).orElseThrow();
         assertThat(updated.getLoyaltyGrade()).isEqualTo(LoyaltyGrade.VIP);
-        // 할인은 직원이 등급별 일괄 적용으로 켜기 전까지 꺼져 있다.
-        assertThat(updated.isLoyaltyDiscountApplied()).isFalse();
-    }
-
-    @Test
-    void 완료_횟수가_기준에_못_미치면_일반_등급이다() {
-        Customer customer = saveCustomer("01011112222");
-        Tour ended = saveEndedTour(TourStatus.CONFIRMED, 1);
-        savePaidBooking(ended, customer, 2);
-
-        tourLifecycleService.completeEndedTours();
-
-        assertThat(customerRepository.findById(customer.getMemberId()).orElseThrow().getLoyaltyGrade())
-                .isEqualTo(LoyaltyGrade.NORMAL);
+        assertThat(updated.currentDiscountRate()).isEqualTo(10);
     }
 
     // 종료일이 오늘부터 daysAgo일 전인 투어
