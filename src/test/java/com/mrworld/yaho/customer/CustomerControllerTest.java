@@ -106,7 +106,8 @@ class CustomerControllerTest {
                 .andExpect(jsonPath("$.customers[0].loyaltyGrade").value("VIP"))
                 .andExpect(jsonPath("$.customers[1].loyaltyGrade").value("NORMAL"));
 
-        assertThat(customerRepository.findById(first.getMemberId()).orElseThrow().currentDiscountRate()).isEqualTo(10);
+        // 등급 변경과 할인 활성화는 별도 정책이다. 등급만 바꾼 직후에는 할인율이 0이다.
+        assertThat(customerRepository.findById(first.getMemberId()).orElseThrow().currentDiscountRate()).isZero();
         assertThat(customerRepository.findById(second.getMemberId()).orElseThrow().currentDiscountRate()).isZero();
     }
 
