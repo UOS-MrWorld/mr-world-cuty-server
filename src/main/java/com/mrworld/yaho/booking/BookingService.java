@@ -147,9 +147,11 @@ public class BookingService {
     }
 
     // 투어 시작 7일 전까지 본인 예약을 취소한다. 결제 완료 예약이면 성공 결제를 환불한다.
+    // 결제와 같은 행 잠금을 걸어, 결제와 동시에 들어와도 환불 없이 취소되거나 취소가 사라지지 않게 한다.
+    // (BookingPaymentCancelConcurrencyTest)
     @Transactional
     public BookingCancelResponse cancelBooking(Long customerId, Long bookingId) {
-        Booking booking = findMyBooking(customerId, bookingId);
+        Booking booking = findMyBookingForUpdate(customerId, bookingId);
         booking.validateCancellable(LocalDate.now());
 
         PaymentStatus paymentStatus = null;
@@ -180,10 +182,22 @@ public class BookingService {
     private Booking findMyBooking(Long customerId, Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 예약입니다."));
+        validateOwner(booking, customerId);
+        return booking;
+    }
+
+    // 예약 행을 잠그고 조회한다. 상태를 바꾸는 요청에서 쓴다.
+    private Booking findMyBookingForUpdate(Long customerId, Long bookingId) {
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 예약입니다."));
+        validateOwner(booking, customerId);
+        return booking;
+    }
+
+    private void validateOwner(Booking booking, Long customerId) {
         if (!booking.isOwnedBy(customerId)) {
             throw new ForbiddenException("본인의 예약이 아닙니다.");
         }
-        return booking;
     }
 
     // 수정 요청에 없는 옵션은 기존 예약 값으로 채워, 생성·가격 계산과 같은 검증과 계산을 쓴다.

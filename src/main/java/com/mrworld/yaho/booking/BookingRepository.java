@@ -2,16 +2,25 @@ package com.mrworld.yaho.booking;
 
 import com.mrworld.yaho.common.dto.IdTotal;
 import com.mrworld.yaho.common.enums.BookingStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
+    // 결제·취소처럼 예약 상태를 읽고 바꾸는 요청이 같은 예약에 동시에 들어오면 한 번에 하나씩 처리되도록 행을 잠근다.
+    // (SELECT ... FOR UPDATE) 먼저 잠근 트랜잭션이 커밋할 때까지 다른 요청은 기다렸다가 바뀐 상태를 읽는다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from Booking b where b.bookingId = :bookingId")
+    Optional<Booking> findByIdForUpdate(@Param("bookingId") Long bookingId);
 
     // 투어별로 특정 상태인 예약을 조회한다.
     @Query("select b from Booking b where b.tour.tourId = :tourId and b.bookingStatus = :status")
