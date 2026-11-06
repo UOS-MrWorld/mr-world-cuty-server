@@ -65,31 +65,51 @@ jobs:
       - name: Upload jar
         run: scp -i ~/.ssh/key.pem app.jar "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/opt/cuty/app.jar.new"
 
-      # 새 jar로 교체 후 재시작, 응답이 없으면 이전 jar로 롤백
+      # 새 jar로 교체 후 재시작한다. /actuator/health가 HTTP 200(UP)일 때만 성공으로 본다.
+      # (예전에는 응답 코드가 000만 아니면 성공으로 봐서 500·404도 통과했다.)
+      # 시간 안에 200이 오지 않으면 이전 jar로 롤백하고, 롤백한 버전도 같은 기준으로 확인한다.
       - name: Restart & health check
         run: |
           ssh -i ~/.ssh/key.pem "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" 'bash -s' <<'EOF'
           set -e
           cd /opt/cuty
+          HEALTH_URL="localhost:8080/actuator/health"
+
+          # 최대 40회(3초 간격, 약 2분) 확인해 HTTP 200이 오면 0, 끝내 오지 않으면 1을 반환한다.
+          wait_healthy() {
+            local code="000"
+            for i in $(seq 1 40); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || true)
+              if [ "$code" = "200" ]; then
+                echo "헬스체크 통과 (HTTP $code, ${i}회차)"
+                return 0
+              fi
+              sleep 3
+            done
+            echo "헬스체크 실패 (마지막 응답 HTTP $code)"
+            return 1
+          }
+
           if [ -f app.jar ]; then cp app.jar app.jar.bak; fi
           mv app.jar.new app.jar
           sudo systemctl restart cuty
 
-          for i in $(seq 1 40); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" localhost:8080/ || true)
-            if [ "$code" != "000" ]; then
-              echo "서버 기동 확인 (HTTP $code)"
-              exit 0
-            fi
-            sleep 3
-          done
+          if wait_healthy; then
+            exit 0
+          fi
 
-          echo "서버 기동 실패"
+          echo "새 버전 기동 실패"
           sudo journalctl -u cuty -n 50 --no-pager
           if [ -f app.jar.bak ]; then
             echo "이전 버전으로 롤백"
             cp app.jar.bak app.jar
             sudo systemctl restart cuty
+            if wait_healthy; then
+              echo "롤백 버전 정상 기동"
+            else
+              echo "롤백 버전도 비정상: 서버 확인 필요"
+              sudo journalctl -u cuty -n 50 --no-pager
+            fi
           fi
           exit 1
           EOF
