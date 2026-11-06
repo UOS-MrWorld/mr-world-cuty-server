@@ -8,6 +8,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -26,6 +27,15 @@ class SpaControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(forwardedUrl("/index.html"));
         }
+    }
+
+    // 배포 스크립트(deploy.yml)는 이 주소가 200을 반환할 때만 배포 성공으로 본다.
+    @Test
+    void 배포_헬스체크_주소는_인증_없이_UP을_반환하고_세부_정보는_숨긴다() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.components").doesNotExist());
     }
 
     @Test
