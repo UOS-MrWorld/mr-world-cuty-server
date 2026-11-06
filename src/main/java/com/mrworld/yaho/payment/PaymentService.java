@@ -28,9 +28,11 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
 
     // 승인·거절 모두 결제 기록을 남긴다. 거절되면 예약은 PENDING으로 남아 다시 결제할 수 있다.
+    // 같은 예약의 결제·취소 요청은 예약 행을 잠가 차례로 처리한다. 잠그지 않으면 동시 요청이 모두
+    // 성공 결제 조회를 통과해 성공 결제가 여러 건 저장된다. (PaymentConcurrencyTest)
     @Transactional
     public PaymentResponse pay(Long customerId, PaymentRequest request) {
-        Booking booking = bookingRepository.findById(request.getBookingId())
+        Booking booking = bookingRepository.findByIdForUpdate(request.getBookingId())
                 .orElseThrow(() -> new NotFoundException("존재하지 않는 예약입니다."));
         if (!booking.isOwnedBy(customerId)) {
             throw new ForbiddenException("본인의 예약이 아닙니다.");
