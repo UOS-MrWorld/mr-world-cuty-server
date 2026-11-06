@@ -21,6 +21,7 @@ import com.mrworld.yaho.member.MemberRepository;
 import com.mrworld.yaho.notification.SmsSender;
 import com.mrworld.yaho.payment.Payment;
 import com.mrworld.yaho.payment.PaymentRepository;
+import com.mrworld.yaho.payment.PaymentService;
 import com.mrworld.yaho.support.DatabaseCleaner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,16 +29,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -71,6 +78,10 @@ class TourLifecycleServiceTest {
 
     @MockitoBean
     private SmsSender smsSender;
+
+    // 실제 환불 로직은 그대로 두고, 실패 격리 테스트에서만 특정 조건에 예외를 던지도록 감싼다.
+    @MockitoSpyBean
+    private PaymentService paymentService;
 
     private InventoryItem scarf;
 
@@ -199,6 +210,75 @@ class TourLifecycleServiceTest {
                 .isEqualTo(LoyaltyGrade.NORMAL);
     }
 
+    // 투어마다 별도 트랜잭션(TransactionTemplate, REQUIRES_NEW)으로 처리하므로 한 투어가 실패해도
+    // 1) 실패한 투어의 변경은 모두 롤백되고 2) 다른 투어는 정상 처리되며 3) 다음 실행에서 다시 처리돼야 한다.
+    @Test
+    void 한_투어의_환불이_실패하면_그_투어만_롤백되고_다른_투어는_처리되며_다음_실행에서_다시_처리된다() {
+        // 투어 A: 결제 2명(1명 + 1명) → 인원 미달로 취소·환불 대상 / 투어 B: 결제 3명 → 확정 대상
+        Tour failingTour = saveTour(6);
+        Booking failingFirst = savePaidBooking(failingTour, saveCustomer("01011110001"), 1);
+        Booking failingSecond = savePaidBooking(failingTour, saveCustomer("01011110002"), 1);
+        Tour healthyTour = saveTour(6);
+        Booking healthyBooking = savePaidBooking(healthyTour, saveCustomer("01022220001"), 3);
+
+        // 투어 A의 환불 중 두 번째 호출에서만 실제 환불을 수행한 뒤 예외를 던진다.
+        // - 처리 순서와 관계없이 "환불 1건은 이미 성공한 뒤 실패"하는 상황을 만든다.
+        // - 실제 환불 메서드의 결제 조회 쿼리가 실행되면서 앞선 환불·예약 취소가 같은 트랜잭션 안에서 DB로 flush된다.
+        //   그래서 아래 검증은 "DB까지 내려간 변경이 롤백됐는지"를 확인한다.
+        Set<Long> failingBookingIds = Set.of(failingFirst.getBookingId(), failingSecond.getBookingId());
+        AtomicBoolean failureEnabled = new AtomicBoolean(true);
+        AtomicInteger failingTourRefundCalls = new AtomicInteger();
+        doAnswer(invocation -> {
+            Object result = invocation.callRealMethod();
+            Booking booking = invocation.getArgument(0);
+            if (failureEnabled.get()
+                    && failingBookingIds.contains(booking.getBookingId())
+                    && failingTourRefundCalls.incrementAndGet() == 2) {
+                throw new IllegalStateException("테스트용 환불 실패");
+            }
+            return result;
+        }).when(paymentService).refund(any(Booking.class));
+
+        // 1차 실행: 투어 A는 두 번째 환불에서 실패한다.
+        tourLifecycleService.closeRecruitingTours();
+
+        // 투어 A: 두 건의 환불과 먼저 처리된 예약 취소까지 함께 롤백되어 처리 전 상태 그대로 남는다.
+        assertThat(failingTourRefundCalls.get()).isEqualTo(2);
+        assertThat(tourRepository.findById(failingTour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.RECRUITING);
+        assertThat(statusOf(failingFirst)).isEqualTo(BookingStatus.PAID);
+        assertThat(statusOf(failingSecond)).isEqualTo(BookingStatus.PAID);
+        assertThat(hasPayment(failingFirst, PaymentStatus.SUCCESS)).isTrue();
+        assertThat(hasPayment(failingSecond, PaymentStatus.SUCCESS)).isTrue();
+
+        // 투어 B: 투어 A의 실패와 관계없이 확정되고 재고 차감·확정 문자까지 처리된다. (스카프 10 - 2개 × 3명 = 4)
+        assertThat(tourRepository.findById(healthyTour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.CONFIRMED);
+        assertThat(statusOf(healthyBooking)).isEqualTo(BookingStatus.PAID);
+        assertThat(inventoryItemRepository.findById(scarf.getItemId()).orElseThrow().getQuantity()).isEqualTo(4);
+        verify(smsSender, times(1)).send(eq("01022220001"), anyString());
+
+        // 2차 실행: 실패 원인이 사라진 다음 날 스케줄러가 다시 돈 상황
+        failureEnabled.set(false);
+        tourLifecycleService.closeRecruitingTours();
+
+        // 투어 A: 이번에는 취소·환불이 모두 반영된다.
+        assertThat(tourRepository.findById(failingTour.getTourId()).orElseThrow().getTourStatus())
+                .isEqualTo(TourStatus.CANCELLED);
+        assertThat(statusOf(failingFirst)).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(statusOf(failingSecond)).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(hasPayment(failingFirst, PaymentStatus.REFUNDED)).isTrue();
+        assertThat(hasPayment(failingSecond, PaymentStatus.REFUNDED)).isTrue();
+
+        // 투어 B: 이미 확정되어 다시 처리되지 않으므로 재고 차감과 문자가 중복되지 않는다.
+        assertThat(inventoryItemRepository.findById(scarf.getItemId()).orElseThrow().getQuantity()).isEqualTo(4);
+        verify(smsSender, times(1)).send(eq("01022220001"), anyString());
+
+        // 취소된 투어 A의 고객에게는 문자가 나가지 않는다.
+        verify(smsSender, never()).send(eq("01011110001"), anyString());
+        verify(smsSender, never()).send(eq("01011110002"), anyString());
+    }
+
     // 종료일이 오늘부터 daysAgo일 전인 투어
     private Tour saveEndedTour(TourStatus tourStatus, int daysAgo) {
         LocalDate endDate = LocalDate.now().minusDays(daysAgo);
@@ -238,6 +318,10 @@ class TourLifecycleServiceTest {
 
     private BookingStatus statusOf(Booking booking) {
         return bookingRepository.findById(booking.getBookingId()).orElseThrow().getBookingStatus();
+    }
+
+    private boolean hasPayment(Booking booking, PaymentStatus status) {
+        return paymentRepository.findByBookingBookingIdAndPaymentStatus(booking.getBookingId(), status).isPresent();
     }
 
     private void cleanUp() {
