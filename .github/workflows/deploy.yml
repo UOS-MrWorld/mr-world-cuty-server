@@ -31,6 +31,8 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_VOICE_API_BASE_URL: https://mr-world-cuty-voice.onrender.com/api/v1
         run: |
           npm ci
           npm run build
