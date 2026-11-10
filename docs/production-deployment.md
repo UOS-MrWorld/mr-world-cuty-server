@@ -12,7 +12,6 @@
 - `SPRING_PROFILES_ACTIVE=prod`
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`
 - 충분히 긴 Base64 `JWT_SECRET` (Voice Render에도 같은 값을 Secret으로 등록)
-- `PUBLIC_STAFF_SIGNUP_ENABLED=false`
 - 필요할 때만 `CORS_ALLOWED_ORIGINS=https://<도메인>`
 - 실제 문자 사용 시에만 `SMS_API_KEY`, `SMS_API_SECRET`, `SMS_SENDER`
 
@@ -24,7 +23,6 @@
 
 ## 배포 후 확인
 
-- 공개 회원가입 요청으로 `STAFF` 계정을 만들 수 없어야 한다.
 - 로그인, 토큰 갱신, 상품 검색, 견적, 예약, Mock 결제, 취소가 동작해야 한다.
 - Voice 요청은 로그인 상태에서만 성공하고, 비로그인·만료 토큰은 401이어야 한다.
 - Swagger 경로는 운영 프로필에서 노출되지 않아야 한다.

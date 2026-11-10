@@ -115,7 +115,7 @@ Gradle은 프로젝트에 포함된 Wrapper(`gradlew`)가 지정 버전(9.7.1)�
 
 MySQL 접속 정보, JWT secret, SMS 설정은 환경변수로 넣는다. (`src/main/resources/application.properties` 참고)
 
-운영에서는 `SPRING_PROFILES_ACTIVE=prod`를 반드시 설정한다. 이 프로필은 스키마 자동 변경과 SQL 출력을 끄고 Swagger를 비공개로 전환한다. `PUBLIC_STAFF_SIGNUP_ENABLED`는 기본값 `false`를 유지하고, 분리 배포가 필요한 경우에만 `CORS_ALLOWED_ORIGINS`에 HTTPS origin을 쉼표로 지정한다.
+운영에서는 `SPRING_PROFILES_ACTIVE=prod`를 반드시 설정한다. 이 프로필은 스키마 자동 변경과 SQL 출력을 끄고 Swagger를 비공개로 전환한다. 분리 배포가 필요한 경우에만 `CORS_ALLOWED_ORIGINS`에 HTTPS origin을 쉼표로 지정한다.
 
 ### .env.example
 
