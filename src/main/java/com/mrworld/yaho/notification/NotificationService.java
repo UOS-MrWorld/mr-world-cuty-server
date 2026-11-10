@@ -78,7 +78,7 @@ public class NotificationService {
             try {
                 smsSender.send(sms.to(), sms.text());
             } catch (Exception e) {
-                log.error("투어 확정 문자 발송 실패 to={}", sms.to(), e);
+                log.error("투어 확정 문자 발송 실패", e);
             }
         }
     }

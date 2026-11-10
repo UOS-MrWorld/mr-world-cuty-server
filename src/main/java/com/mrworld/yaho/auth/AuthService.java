@@ -14,6 +14,7 @@ import com.mrworld.yaho.member.StaffRepository;
 import com.mrworld.yaho.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,8 +34,14 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${auth.public-staff-signup-enabled:false}")
+    private boolean publicStaffSignupEnabled;
+
     @Transactional
     public SignupResponse signup(SignupRequest request) {
+        if(request.getRole() == Role.STAFF && !publicStaffSignupEnabled) {
+            throw new BadRequestException("직원 계정은 공개 회원가입으로 만들 수 없습니다.");
+        }
         if(!request.getPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("비밀번호가 일치하지 않습니다.");
         }
