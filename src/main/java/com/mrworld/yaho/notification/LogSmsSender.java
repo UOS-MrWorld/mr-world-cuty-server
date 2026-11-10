@@ -8,6 +8,11 @@ public class LogSmsSender implements SmsSender {
 
     @Override
     public void send(String to, String text) {
-        log.info("[SMS 미발송] to={}, text={}", to, text);
+        log.info("[SMS 미발송] to=***{}", lastFour(to));
+    }
+
+    private String lastFour(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.length() < 4) return "****";
+        return phoneNumber.substring(phoneNumber.length() - 4);
     }
 }
