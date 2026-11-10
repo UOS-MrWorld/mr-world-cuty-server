@@ -24,6 +24,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -105,22 +108,35 @@ class DemoDataInitializerTest {
                 .allSatisfy(tour -> assertThat(tour.isBookingClosed(LocalDate.now())).isFalse());
     }
 
+    // 상품명의 "N박 M일"이 실제 출발일·종료일과 맞아야 한다.
     @Test
-    void 결제_인원이_모자란_세부_투어를_마감하면_취소된다() {
-        Tour cebu = findTour("세부 허니문 5박 6일");
-
-        tourLifecycleService.closeTour(cebu.getTourId());
-
-        assertThat(cebu.getTourStatus()).isEqualTo(TourStatus.CANCELLED);
+    void 상품명의_일정_표기는_실제_일정과_같다() {
+        Pattern schedule = Pattern.compile("(\\d+)박 (\\d+)일");
+        assertThat(tourRepository.findAll()).allSatisfy(tour -> {
+            Matcher matcher = schedule.matcher(tour.getTourName());
+            assertThat(matcher.find()).as(tour.getTourName()).isTrue();
+            long nights = ChronoUnit.DAYS.between(tour.getStartDate(), tour.getEndDate());
+            assertThat(Long.parseLong(matcher.group(1))).as(tour.getTourName()).isEqualTo(nights);
+            assertThat(Long.parseLong(matcher.group(2))).as(tour.getTourName()).isEqualTo(nights + 1);
+        });
     }
 
     @Test
-    void 나트랑_투어는_결제_대기_예약까지_결제하면_확정_인원이_된다() {
-        Tour nhaTrang = findTour("나트랑 힐링 리조트 4박 5일");
+    void 결제_인원이_모자란_거제_투어를_마감하면_취소된다() {
+        Tour geoje = findTour("거제 허니문 5박 6일");
 
-        int guestCount = bookingRepository.findAllByTourIdAndBookingStatus(nhaTrang.getTourId(), BookingStatus.PAID)
+        tourLifecycleService.closeTour(geoje.getTourId());
+
+        assertThat(geoje.getTourStatus()).isEqualTo(TourStatus.CANCELLED);
+    }
+
+    @Test
+    void 속초_투어는_결제_대기_예약까지_결제하면_확정_인원이_된다() {
+        Tour sokcho = findTour("속초 힐링 리조트 4박 5일");
+
+        int guestCount = bookingRepository.findAllByTourIdAndBookingStatus(sokcho.getTourId(), BookingStatus.PAID)
                 .stream().mapToInt(Booking::getGuestCount).sum();
-        int pendingGuestCount = bookingRepository.findAllByTourIdAndBookingStatus(nhaTrang.getTourId(), BookingStatus.PENDING)
+        int pendingGuestCount = bookingRepository.findAllByTourIdAndBookingStatus(sokcho.getTourId(), BookingStatus.PENDING)
                 .stream().mapToInt(Booking::getGuestCount).sum();
 
         assertThat(guestCount).isEqualTo(2);
