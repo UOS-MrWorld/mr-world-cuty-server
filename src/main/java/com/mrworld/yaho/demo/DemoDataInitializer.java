@@ -95,10 +95,10 @@ public class DemoDataInitializer implements ApplicationRunner {
         findOrCreateCustomer("customer5", "정우진", "제주특별자치도 제주시 첨단로 242");
 
         InventoryItem pouch = findOrCreateItem("여행용 파우치", 200);
-        InventoryItem golfBall = findOrCreateItem("골프공 세트", 80);
-        InventoryItem socks = findOrCreateItem("트레킹 양말", 120);
-        InventoryItem aromaOil = findOrCreateItem("아로마 오일 세트", 40);
-        InventoryItem mug = findOrCreateItem("커플 머그컵", 5);
+        InventoryItem golfBall = findOrCreateItem("골프공", 80);
+        InventoryItem scarf = findOrCreateItem("스카프", 120);
+        InventoryItem ginseng = findOrCreateItem("인삼식품", 40);
+        InventoryItem coupleTee = findOrCreateItem("커플티", 5);
 
         LocalDate today = LocalDate.now();
 
@@ -106,13 +106,13 @@ public class DemoDataInitializer implements ApplicationRunner {
         Tour namhae = createTour(Theme.GOLF, "남해 골프 3박 4일", "남해 바다를 끼고 도는 명문 코스 3라운드",
                 today.minusDays(170), 3, 790_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
         Tour jeju = createTour(Theme.TREKKING, "제주 올레길 트레킹 2박 3일", "올레 7코스와 한라산 영실 코스를 걷는 일정",
-                today.minusDays(140), 2, 450_000, Transport.PREMIUM_VAN_10, pouch, socks);
+                today.minusDays(140), 2, 450_000, Transport.PREMIUM_VAN_10, pouch, scarf);
         Tour damyang = createTour(Theme.HEALING, "담양 힐링 4박 5일", "죽녹원 대숲 산책과 스파로 쉬는 일정",
-                today.minusDays(105), 4, 690_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
+                today.minusDays(105), 4, 690_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
         Tour seorak = createTour(Theme.TREKKING, "설악산 트레킹 4박 5일", "대청봉 능선과 척산온천을 함께 즐기는 일정",
-                today.minusDays(70), 4, 590_000, Transport.PREMIUM_VAN_10, pouch, socks);
+                today.minusDays(70), 4, 590_000, Transport.PREMIUM_VAN_10, pouch, scarf);
         Tour jejuHoneymoon = createTour(Theme.HONEYMOON, "제주 허니문 5박 6일", "오션뷰 풀빌라에서 보내는 둘만의 시간",
-                today.minusDays(35), 5, 1_190_000, Transport.PREMIUM_CAR_2, pouch, mug);
+                today.minusDays(35), 5, 1_190_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
         for (Tour tour : List.of(namhae, jeju, damyang, seorak, jejuHoneymoon)) {
             tour.confirm();
             tour.complete();
@@ -157,12 +157,12 @@ public class DemoDataInitializer implements ApplicationRunner {
 
         // 모집 중인 투어
         Tour sokcho = createTour(Theme.HEALING, "속초 힐링 리조트 4박 5일", "온천 스파와 오션뷰 객실에서 쉬어 가는 일정",
-                today.plusDays(60), 4, 740_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
+                today.plusDays(60), 4, 740_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
         pay(book(sokcho, customer2, TourLevel.PREMIUM, 2, coffee, 2));
         book(sokcho, customer, TourLevel.GRAND, 1);
 
         Tour geoje = createTour(Theme.HONEYMOON, "거제 허니문 5박 6일", "외도 보타니아와 요트 투어를 즐기는 일정",
-                today.plusDays(75), 5, 1_090_000, Transport.PREMIUM_CAR_2, pouch, mug);
+                today.plusDays(75), 5, 1_090_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
         pay(book(geoje, customer4, TourLevel.GRAND, 2));
 
         Tour gijang = createTour(Theme.GOLF, "부산 기장 골프 3박 4일", "해안 절벽을 끼고 도는 라운드",
@@ -170,11 +170,11 @@ public class DemoDataInitializer implements ApplicationRunner {
         refund(book(gijang, customer3, TourLevel.CLASSIC, 2));
 
         createTour(Theme.TREKKING, "백두대간 종주 트레킹 9박 10일", "지리산 천왕봉부터 설악산 대청봉까지 주요 구간을 걷는 일정",
-                today.plusDays(105), 9, 1_390_000, Transport.PREMIUM_VAN_10, pouch, socks);
+                today.plusDays(105), 9, 1_390_000, Transport.PREMIUM_VAN_10, pouch, scarf);
         createTour(Theme.HONEYMOON, "울릉도 허니문 6박 7일", "성인봉과 해안 일주 도로를 함께 둘러보는 일정",
-                today.plusDays(120), 6, 1_290_000, Transport.PREMIUM_CAR_2, pouch, mug);
+                today.plusDays(120), 6, 1_290_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
         createTour(Theme.HEALING, "전주 한옥 힐링 3박 4일", "한옥 스테이와 전통 찻집에서 머무는 일정",
-                today.plusDays(135), 3, 590_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
+                today.plusDays(135), 3, 590_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
     }
 
     private void createStaffIfAbsent() {
