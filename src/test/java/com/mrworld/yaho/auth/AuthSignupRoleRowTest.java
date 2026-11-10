@@ -39,6 +39,7 @@ class AuthSignupRoleRowTest {
 
         Customer customer = customerRepository.findById(memberId).orElseThrow();
         assertThat(customer.getLoyaltyGrade()).isEqualTo(LoyaltyGrade.NORMAL);
+        assertThat(customer.isLoyaltyDiscountApplied()).isFalse();
         assertThat(customer.currentDiscountRate()).isZero();
         assertThat(staffRepository.existsById(memberId)).isFalse();
     }
