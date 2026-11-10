@@ -44,9 +44,9 @@ import java.util.List;
 //
 // 발표 시나리오
 // - 단골 할인: customer는 완료 5회 VIP이고 할인 미적용. 직원이 VIP 일괄 적용하면 이후 결제부터 10% 할인된다.
-// - 확정 문자: 나트랑은 결제 2명. customer의 결제 전 예약 1명을 결제한 뒤 마감하면 3명이 되어 확정된다.
-// - 미달 취소: 세부는 결제 2명뿐이라 마감하면 취소·환불된다.
-// - 등급 상승: customer3은 완료 4회. 다낭을 완료 처리하면 5회가 되어 VIP가 된다.
+// - 확정 문자: 속초는 결제 2명. customer의 결제 전 예약 1명을 결제한 뒤 마감하면 3명이 되어 확정된다.
+// - 미달 취소: 거제는 결제 2명뿐이라 마감하면 취소·환불된다.
+// - 등급 상승: customer3은 완료 4회. 평창을 완료 처리하면 5회가 되어 VIP가 된다.
 @Slf4j
 @Component
 @Profile("demo")
@@ -103,43 +103,43 @@ public class DemoDataInitializer implements ApplicationRunner {
         LocalDate today = LocalDate.now();
 
         // 지난 여행
-        Tour okinawa = createTour(Theme.GOLF, "오키나와 골프 3박 4일", "에메랄드 바다를 끼고 도는 명문 코스 3라운드",
+        Tour namhae = createTour(Theme.GOLF, "남해 골프 3박 4일", "남해 바다를 끼고 도는 명문 코스 3라운드",
                 today.minusDays(170), 3, 1_190_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
         Tour jeju = createTour(Theme.TREKKING, "제주 올레길 트레킹 2박 3일", "올레 7코스와 한라산 영실 코스를 걷는 일정",
                 today.minusDays(140), 2, 590_000, Transport.PREMIUM_VAN_10, pouch, socks);
-        Tour bali = createTour(Theme.HEALING, "발리 우붓 힐링 4박 5일", "우붓 정글 리조트에서 요가와 스파로 쉬는 일정",
+        Tour damyang = createTour(Theme.HEALING, "담양 힐링 4박 5일", "죽녹원 대숲 산책과 스파로 쉬는 일정",
                 today.minusDays(105), 4, 1_490_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
-        Tour hokkaido = createTour(Theme.TREKKING, "홋카이도 대설산 트레킹 4박 5일", "다이세쓰산 능선과 온천을 함께 즐기는 일정",
+        Tour seorak = createTour(Theme.TREKKING, "설악산 트레킹 4박 5일", "대청봉 능선과 척산온천을 함께 즐기는 일정",
                 today.minusDays(70), 4, 1_290_000, Transport.PREMIUM_VAN_10, pouch, socks);
-        Tour maldives = createTour(Theme.HONEYMOON, "몰디브 허니문 5박 6일", "수상 빌라에서 보내는 둘만의 시간",
+        Tour jejuHoneymoon = createTour(Theme.HONEYMOON, "제주 허니문 5박 6일", "오션뷰 풀빌라에서 보내는 둘만의 시간",
                 today.minusDays(35), 5, 3_290_000, Transport.PREMIUM_CAR_2, pouch, mug);
-        for (Tour tour : List.of(okinawa, jeju, bali, hokkaido, maldives)) {
+        for (Tour tour : List.of(namhae, jeju, damyang, seorak, jejuHoneymoon)) {
             tour.confirm();
             tour.complete();
         }
-        Tour hanoi = createTour(Theme.GOLF, "하노이 골프 3박 4일", "인원 미달로 취소된 일정",
+        Tour yeosu = createTour(Theme.GOLF, "여수 골프 3박 4일", "인원 미달로 취소된 일정",
                 today.minusDays(20), 3, 890_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
-        hanoi.cancel();
+        yeosu.cancel();
 
-        pay(book(okinawa, customer, TourLevel.GRAND, 2));
+        pay(book(namhae, customer, TourLevel.GRAND, 2));
         pay(book(jeju, customer, TourLevel.CLASSIC, 2));
-        pay(book(bali, customer, TourLevel.PREMIUM, 2, champagne, 2));
-        pay(book(hokkaido, customer, TourLevel.GRAND, 2));
-        pay(book(maldives, customer, TourLevel.PREMIUM, 2, champagne, 1));
+        pay(book(damyang, customer, TourLevel.PREMIUM, 2, champagne, 2));
+        pay(book(seorak, customer, TourLevel.GRAND, 2));
+        pay(book(jejuHoneymoon, customer, TourLevel.PREMIUM, 2, champagne, 1));
 
-        pay(book(okinawa, customer2, TourLevel.PREMIUM, 2));
+        pay(book(namhae, customer2, TourLevel.PREMIUM, 2));
         pay(book(jeju, customer2, TourLevel.GRAND, 4, coffee, 4));
-        pay(book(bali, customer2, TourLevel.GRAND, 2));
-        pay(book(hokkaido, customer2, TourLevel.PREMIUM, 3));
-        pay(book(maldives, customer2, TourLevel.GRAND, 2));
+        pay(book(damyang, customer2, TourLevel.GRAND, 2));
+        pay(book(seorak, customer2, TourLevel.PREMIUM, 3));
+        pay(book(jejuHoneymoon, customer2, TourLevel.GRAND, 2));
 
-        pay(book(okinawa, customer3, TourLevel.CLASSIC, 1));
+        pay(book(namhae, customer3, TourLevel.CLASSIC, 1));
         pay(book(jeju, customer3, TourLevel.CLASSIC, 1));
-        pay(book(bali, customer3, TourLevel.GRAND, 1));
-        pay(book(hokkaido, customer3, TourLevel.CLASSIC, 1));
+        pay(book(damyang, customer3, TourLevel.GRAND, 1));
+        pay(book(seorak, customer3, TourLevel.CLASSIC, 1));
 
         pay(book(jeju, customer4, TourLevel.GRAND, 2));
-        refund(book(hanoi, customer4, TourLevel.CLASSIC, 2));
+        refund(book(yeosu, customer4, TourLevel.CLASSIC, 2));
 
         updateLoyaltyGrade(customer);
         updateLoyaltyGrade(customer2);
@@ -148,32 +148,32 @@ public class DemoDataInitializer implements ApplicationRunner {
         customer2.activateDiscount(LocalDateTime.now().minusDays(7));
 
         // 확정된 투어
-        Tour danang = createTour(Theme.GOLF, "다낭 골프 4박 5일", "바나 힐스와 몽고메리 링크스를 도는 일정",
+        Tour pyeongchang = createTour(Theme.GOLF, "평창 골프 4박 5일", "대관령 고원의 두 코스를 도는 일정",
                 today.plusDays(45), 4, 1_390_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
-        danang.confirm();
-        pay(book(danang, customer, TourLevel.GRAND, 2));
-        pay(book(danang, customer2, TourLevel.PREMIUM, 2, champagne, 1));
-        pay(book(danang, customer3, TourLevel.CLASSIC, 1));
+        pyeongchang.confirm();
+        pay(book(pyeongchang, customer, TourLevel.GRAND, 2));
+        pay(book(pyeongchang, customer2, TourLevel.PREMIUM, 2, champagne, 1));
+        pay(book(pyeongchang, customer3, TourLevel.CLASSIC, 1));
 
         // 모집 중인 투어
-        Tour nhaTrang = createTour(Theme.HEALING, "나트랑 힐링 리조트 4박 5일", "머드 스파와 프라이빗 비치로 쉬어 가는 일정",
+        Tour sokcho = createTour(Theme.HEALING, "속초 힐링 리조트 4박 5일", "온천 스파와 오션뷰 객실에서 쉬어 가는 일정",
                 today.plusDays(60), 4, 1_590_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
-        pay(book(nhaTrang, customer2, TourLevel.PREMIUM, 2, coffee, 2));
-        book(nhaTrang, customer, TourLevel.GRAND, 1);
+        pay(book(sokcho, customer2, TourLevel.PREMIUM, 2, coffee, 2));
+        book(sokcho, customer, TourLevel.GRAND, 1);
 
-        Tour cebu = createTour(Theme.HONEYMOON, "세부 허니문 5박 6일", "막탄 섬 리조트와 호핑 투어를 즐기는 일정",
+        Tour geoje = createTour(Theme.HONEYMOON, "거제 허니문 5박 6일", "외도 보타니아와 요트 투어를 즐기는 일정",
                 today.plusDays(75), 5, 2_490_000, Transport.PREMIUM_CAR_2, pouch, mug);
-        pay(book(cebu, customer4, TourLevel.GRAND, 2));
+        pay(book(geoje, customer4, TourLevel.GRAND, 2));
 
-        Tour chiangMai = createTour(Theme.GOLF, "치앙마이 골프 3박 5일", "선선한 고산 기후에서 즐기는 라운드",
+        Tour gijang = createTour(Theme.GOLF, "부산 기장 골프 3박 4일", "해안 절벽을 끼고 도는 라운드",
                 today.plusDays(90), 3, 1_090_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
-        refund(book(chiangMai, customer3, TourLevel.CLASSIC, 2));
+        refund(book(gijang, customer3, TourLevel.CLASSIC, 2));
 
-        createTour(Theme.TREKKING, "안나푸르나 베이스캠프 트레킹 9박 10일", "포카라에서 출발해 해발 4,130m까지 오르는 일정",
+        createTour(Theme.TREKKING, "백두대간 종주 트레킹 9박 10일", "지리산 천왕봉부터 설악산 대청봉까지 주요 구간을 걷는 일정",
                 today.plusDays(105), 9, 2_190_000, Transport.PREMIUM_VAN_10, pouch, socks);
-        createTour(Theme.HONEYMOON, "하와이 허니문 6박 7일", "오아후와 마우이를 함께 둘러보는 일정",
+        createTour(Theme.HONEYMOON, "울릉도 허니문 6박 7일", "성인봉과 해안 일주 도로를 함께 둘러보는 일정",
                 today.plusDays(120), 6, 3_590_000, Transport.PREMIUM_CAR_2, pouch, mug);
-        createTour(Theme.HEALING, "교토 료칸 힐링 3박 4일", "단풍 정원과 온천 료칸에서 머무는 일정",
+        createTour(Theme.HEALING, "전주 한옥 힐링 3박 4일", "한옥 스테이와 전통 찻집에서 머무는 일정",
                 today.plusDays(135), 3, 1_290_000, Transport.PREMIUM_VAN_10, pouch, aromaOil);
     }
 
