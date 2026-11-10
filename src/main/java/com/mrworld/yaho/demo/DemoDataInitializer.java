@@ -38,15 +38,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 // 데모 전용. demo 프로필로 실행할 때만 발표에 쓸 회원·투어·예약·결제·재고를 만든다.
-// 계정은 고객 customer / customer (추가 고객 customer2~5, 비밀번호 동일), 직원 staff / staffstaff 이다.
+// 계정은 고객 customer / customer (추가 고객 customer2·customer3, 비밀번호 동일), 직원 staff / staffstaff 이다.
 // customer2가 있으면 이미 넣은 것으로 보고 다시 만들지 않는다. customer·staff 계정이 먼저 있으면 그 계정을 그대로 쓴다.
-// 날짜는 실행일 기준이고, 모집 중 투어는 발표 전에 마감되지 않도록 멀리 잡는다.
+// 날짜는 발표일(demo.base-date, 없으면 실행일) 기준이다.
+// 발표 장면의 투어는 발표일이 곧 처리일이 되도록 잡아, 데모 API가 자정 스케줄러의 처리를 앞당겨 실행하는 것으로 보이게 한다.
 //
 // 발표 시나리오
 // - 단골 할인: customer는 완료 5회 VIP이고 할인 미적용. 직원이 VIP 일괄 적용하면 이후 결제부터 10% 할인된다.
-// - 확정 문자: 속초는 결제 2명. customer의 결제 전 예약 1명을 결제한 뒤 마감하면 3명이 되어 확정된다.
-// - 미달 취소: 거제는 결제 2명뿐이라 마감하면 취소·환불된다.
-// - 등급 상승: customer3은 완료 4회. 평창을 완료 처리하면 5회가 되어 VIP가 된다.
+// - 확정 문자: 속초는 결제 2명이고 발표일이 예약 마감일(출발 7일 전)이다.
+//   customer의 결제 전 예약 1명을 결제한 뒤 마감하면 3명이 되어 확정된다.
+// - 미달 취소: 거제도 발표일이 마감일이고 결제 2명뿐이라 마감하면 취소·환불된다.
+// - 등급 상승: customer3은 완료 4회. 평창은 발표일에 끝나는 확정 투어라, 완료 처리하면 5회가 되어 VIP가 된다.
+//   종료일 당일에는 스케줄러가 완료하지 않으므로(종료일이 지난 다음 날 처리) 발표 전에 자동으로 완료되지 않는다.
+// - 취소·환불: customer는 부산 기장 결제 완료 예약이 있어, 요청하면 고객 취소와 자동 환불을 보여 줄 수 있다.
 @Slf4j
 @Component
 @Profile("demo")
@@ -73,6 +77,10 @@ public class DemoDataInitializer implements ApplicationRunner {
     @Value("${demo.phone-num:01000000000}")
     private String phoneNum;
 
+    // 발표일(yyyy-MM-dd). 비어 있으면 실행일을 발표일로 본다.
+    @Value("${demo.base-date:}")
+    private String baseDate;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -91,8 +99,6 @@ public class DemoDataInitializer implements ApplicationRunner {
         Customer customer = findOrCreateCustomer(CUSTOMER_LOGIN_ID, "김민준", "서울특별시 동대문구 서울시립대로 163");
         Customer customer2 = findOrCreateCustomer(SEEDED_MARKER_LOGIN_ID, "이서연", "서울특별시 강남구 테헤란로 152");
         Customer customer3 = findOrCreateCustomer("customer3", "박지호", "부산광역시 해운대구 센텀중앙로 79");
-        Customer customer4 = findOrCreateCustomer("customer4", "최수아", "대전광역시 유성구 대학로 99");
-        findOrCreateCustomer("customer5", "정우진", "제주특별자치도 제주시 첨단로 242");
 
         InventoryItem pouch = findOrCreateItem("여행용 파우치", 200);
         InventoryItem golfBall = findOrCreateItem("골프공", 80);
@@ -100,25 +106,26 @@ public class DemoDataInitializer implements ApplicationRunner {
         InventoryItem ginseng = findOrCreateItem("인삼식품", 40);
         InventoryItem coupleTee = findOrCreateItem("커플티", 5);
 
-        LocalDate today = LocalDate.now();
+        LocalDate demoDay = demoDay();
+        LocalDate closingDayStart = demoDay.plusDays(Tour.BOOKING_CLOSE_DAYS_BEFORE_START);
 
         // 지난 여행
         Tour namhae = createTour(Theme.GOLF, "남해 골프 3박 4일", "남해 바다를 끼고 도는 명문 코스 3라운드",
-                today.minusDays(170), 3, 790_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+                demoDay.minusDays(170), 3, 790_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
         Tour jeju = createTour(Theme.TREKKING, "제주 올레길 트레킹 2박 3일", "올레 7코스와 한라산 영실 코스를 걷는 일정",
-                today.minusDays(140), 2, 450_000, Transport.PREMIUM_VAN_10, pouch, scarf);
+                demoDay.minusDays(140), 2, 450_000, Transport.PREMIUM_VAN_10, pouch, scarf);
         Tour damyang = createTour(Theme.HEALING, "담양 힐링 4박 5일", "죽녹원 대숲 산책과 스파로 쉬는 일정",
-                today.minusDays(105), 4, 690_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
+                demoDay.minusDays(105), 4, 690_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
         Tour seorak = createTour(Theme.TREKKING, "설악산 트레킹 4박 5일", "대청봉 능선과 척산온천을 함께 즐기는 일정",
-                today.minusDays(70), 4, 590_000, Transport.PREMIUM_VAN_10, pouch, scarf);
+                demoDay.minusDays(70), 4, 590_000, Transport.PREMIUM_VAN_10, pouch, scarf);
         Tour jejuHoneymoon = createTour(Theme.HONEYMOON, "제주 허니문 5박 6일", "오션뷰 풀빌라에서 보내는 둘만의 시간",
-                today.minusDays(35), 5, 1_190_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
+                demoDay.minusDays(35), 5, 1_190_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
         for (Tour tour : List.of(namhae, jeju, damyang, seorak, jejuHoneymoon)) {
             tour.confirm();
             tour.complete();
         }
         Tour yeosu = createTour(Theme.GOLF, "여수 골프 3박 4일", "인원 미달로 취소된 일정",
-                today.minusDays(20), 3, 690_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+                demoDay.minusDays(20), 3, 690_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
         yeosu.cancel();
 
         pay(book(namhae, customer, TourLevel.GRAND, 2));
@@ -138,18 +145,16 @@ public class DemoDataInitializer implements ApplicationRunner {
         pay(book(damyang, customer3, TourLevel.GRAND, 1));
         pay(book(seorak, customer3, TourLevel.CLASSIC, 1));
 
-        pay(book(jeju, customer4, TourLevel.GRAND, 2));
-        refund(book(yeosu, customer4, TourLevel.CLASSIC, 2));
+        refund(book(yeosu, customer2, TourLevel.CLASSIC, 2));
 
         updateLoyaltyGrade(customer);
         updateLoyaltyGrade(customer2);
         updateLoyaltyGrade(customer3);
-        updateLoyaltyGrade(customer4);
         customer2.activateDiscount(LocalDateTime.now().minusDays(7));
 
         // 확정된 투어
         Tour pyeongchang = createTour(Theme.GOLF, "평창 골프 4박 5일", "대관령 고원의 두 코스를 도는 일정",
-                today.plusDays(45), 4, 890_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+                demoDay.minusDays(4), 4, 890_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
         pyeongchang.confirm();
         pay(book(pyeongchang, customer, TourLevel.GRAND, 2));
         pay(book(pyeongchang, customer2, TourLevel.PREMIUM, 2, champagne, 1));
@@ -157,24 +162,29 @@ public class DemoDataInitializer implements ApplicationRunner {
 
         // 모집 중인 투어
         Tour sokcho = createTour(Theme.HEALING, "속초 힐링 리조트 4박 5일", "온천 스파와 오션뷰 객실에서 쉬어 가는 일정",
-                today.plusDays(60), 4, 740_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
+                closingDayStart, 4, 740_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
         pay(book(sokcho, customer2, TourLevel.PREMIUM, 2, coffee, 2));
         book(sokcho, customer, TourLevel.GRAND, 1);
 
         Tour geoje = createTour(Theme.HONEYMOON, "거제 허니문 5박 6일", "외도 보타니아와 요트 투어를 즐기는 일정",
-                today.plusDays(75), 5, 1_090_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
-        pay(book(geoje, customer4, TourLevel.GRAND, 2));
+                closingDayStart, 5, 1_090_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
+        pay(book(geoje, customer2, TourLevel.GRAND, 2));
 
         Tour gijang = createTour(Theme.GOLF, "부산 기장 골프 3박 4일", "해안 절벽을 끼고 도는 라운드",
-                today.plusDays(90), 3, 750_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
-        refund(book(gijang, customer3, TourLevel.CLASSIC, 2));
+                demoDay.plusDays(90), 3, 750_000, Transport.PREMIUM_VAN_10, pouch, golfBall);
+        // 요청 시 고객 취소·환불을 보여 줄 결제 완료 예약. 출발이 멀어 취소할 수 있고, 다른 시나리오 인원에 영향이 없다.
+        pay(book(gijang, customer, TourLevel.CLASSIC, 1));
 
         createTour(Theme.TREKKING, "백두대간 종주 트레킹 9박 10일", "지리산 천왕봉부터 설악산 대청봉까지 주요 구간을 걷는 일정",
-                today.plusDays(105), 9, 1_390_000, Transport.PREMIUM_VAN_10, pouch, scarf);
+                demoDay.plusDays(105), 9, 1_390_000, Transport.PREMIUM_VAN_10, pouch, scarf);
         createTour(Theme.HONEYMOON, "울릉도 허니문 6박 7일", "성인봉과 해안 일주 도로를 함께 둘러보는 일정",
-                today.plusDays(120), 6, 1_290_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
+                demoDay.plusDays(120), 6, 1_290_000, Transport.PREMIUM_CAR_2, pouch, coupleTee);
         createTour(Theme.HEALING, "전주 한옥 힐링 3박 4일", "한옥 스테이와 전통 찻집에서 머무는 일정",
-                today.plusDays(135), 3, 590_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
+                demoDay.plusDays(135), 3, 590_000, Transport.PREMIUM_VAN_10, pouch, ginseng);
+    }
+
+    private LocalDate demoDay() {
+        return baseDate == null || baseDate.isBlank() ? LocalDate.now() : LocalDate.parse(baseDate.trim());
     }
 
     private void createStaffIfAbsent() {

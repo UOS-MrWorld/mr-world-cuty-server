@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,7 +67,7 @@ class DemoDataInitializerTest {
     @Test
     void 고객과_직원은_데모_비밀번호로_로그인한다() {
         assertThat(authService.login(loginRequest("customer", "customer")).getAccessToken()).isNotBlank();
-        assertThat(authService.login(loginRequest("customer5", "customer")).getAccessToken()).isNotBlank();
+        assertThat(authService.login(loginRequest("customer3", "customer")).getAccessToken()).isNotBlank();
         assertThat(authService.login(loginRequest("staff", "staffstaff")).getAccessToken()).isNotBlank();
         assertThat(staffRepository.existsById(findMember("staff").getMemberId())).isTrue();
     }
@@ -106,6 +107,53 @@ class DemoDataInitializerTest {
         assertThat(tourRepository.findAll()).filteredOn(tour -> tour.getTourStatus() == TourStatus.RECRUITING)
                 .isNotEmpty()
                 .allSatisfy(tour -> assertThat(tour.isBookingClosed(LocalDate.now())).isFalse());
+    }
+
+    @Test
+    void 시연_고객은_세_명이다() {
+        assertThat(customerRepository.count()).isEqualTo(3);
+        assertThat(memberRepository.findByLoginId("customer4")).isEmpty();
+    }
+
+    @Test
+    void 고객_취소_시연용_예약은_결제_완료이고_취소할_수_있다() {
+        Tour gijang = findTour("부산 기장 골프 3박 4일");
+        Customer customer = findCustomer("customer");
+
+        assertThat(bookingRepository.findAllByTourIdAndBookingStatus(gijang.getTourId(), BookingStatus.PAID))
+                .singleElement()
+                .satisfies(booking -> assertThat(booking.getCustomer().getMemberId()).isEqualTo(customer.getMemberId()));
+        assertThat(gijang.isBookingClosed(LocalDate.now())).isFalse();
+    }
+
+    // demo.base-date가 없으면 실행일이 발표일이다.
+    @Test
+    void 완료된_투어는_발표일_전에_끝났다() {
+        LocalDate demoDay = LocalDate.now();
+        assertThat(tourRepository.findAll()).filteredOn(tour -> tour.getTourStatus() == TourStatus.COMPLETED)
+                .isNotEmpty()
+                .allSatisfy(tour -> assertThat(tour.getEndDate()).isBefore(demoDay));
+    }
+
+    @Test
+    void 발표_장면의_투어는_발표일이_처리일이다() {
+        LocalDate demoDay = LocalDate.now();
+
+        // 평창: 발표일에 끝나는 확정 투어. 종료일 당일에는 스케줄러가 완료하지 않는다.
+        Tour pyeongchang = findTour("평창 골프 4박 5일");
+        assertThat(pyeongchang.getTourStatus()).isEqualTo(TourStatus.CONFIRMED);
+        assertThat(pyeongchang.getEndDate()).isEqualTo(demoDay);
+        assertThat(tourRepository.findAllByTourStatusAndEndDateBefore(TourStatus.CONFIRMED, demoDay)).isEmpty();
+
+        // 속초·거제: 발표일이 예약 마감일이라 발표일에도 결제할 수 있고, 자정 마감 대상은 아니다.
+        for (String tourName : List.of("속초 힐링 리조트 4박 5일", "거제 허니문 5박 6일")) {
+            Tour tour = findTour(tourName);
+            assertThat(tour.getTourStatus()).isEqualTo(TourStatus.RECRUITING);
+            assertThat(tour.getStartDate().minusDays(Tour.BOOKING_CLOSE_DAYS_BEFORE_START)).isEqualTo(demoDay);
+            assertThat(tour.isBookingClosed(demoDay)).isFalse();
+        }
+        assertThat(tourRepository.findAllByTourStatusAndStartDateBefore(
+                TourStatus.RECRUITING, demoDay.plusDays(Tour.BOOKING_CLOSE_DAYS_BEFORE_START))).isEmpty();
     }
 
     // 상품명의 "N박 M일"이 실제 출발일·종료일과 맞아야 한다.
