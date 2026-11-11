@@ -206,56 +206,6 @@ class CustomerControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    @Test
-    void 여러_고객의_등급을_한_요청으로_변경하고_할인_적용_여부는_그대로_둔다() throws Exception {
-        Customer first = saveCustomer("첫째", LoyaltyGrade.NORMAL, false);
-        Customer second = saveCustomer("둘째", LoyaltyGrade.VIP, true);
-        String body = """
-                {"changes": [
-                  {"customerId": %d, "loyaltyGrade": "VIP"},
-                  {"customerId": %d, "loyaltyGrade": "NORMAL"}
-                ]}
-                """.formatted(first.getMemberId(), second.getMemberId());
-
-        mockMvc.perform(patch(URL + "/customers/loyalty-grades")
-                        .header("Authorization", bearer(Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.updatedCount").value(2))
-                .andExpect(jsonPath("$.customers[0].customerId").value(first.getMemberId()))
-                .andExpect(jsonPath("$.customers[0].loyaltyGrade").value("VIP"))
-                .andExpect(jsonPath("$.customers[1].loyaltyGrade").value("NORMAL"));
-
-        // 등급만 바꾼 고객은 할인이 꺼진 채로 남고, 이미 켜져 있던 고객은 켜진 채로 남는다.
-        assertThat(customerRepository.findById(first.getMemberId()).orElseThrow().isLoyaltyDiscountApplied()).isFalse();
-        assertThat(customerRepository.findById(second.getMemberId()).orElseThrow().isLoyaltyDiscountApplied()).isTrue();
-    }
-
-    @Test
-    void 등급_일괄_변경에_중복되거나_없는_고객이_있으면_전체_요청을_거절한다() throws Exception {
-        Customer customer = saveCustomer("고객", LoyaltyGrade.NORMAL, false);
-        String duplicate = """
-                {"changes": [
-                  {"customerId": %d, "loyaltyGrade": "VIP"},
-                  {"customerId": %d, "loyaltyGrade": "NORMAL"}
-                ]}
-                """.formatted(customer.getMemberId(), customer.getMemberId());
-        mockMvc.perform(patch(URL + "/customers/loyalty-grades")
-                        .header("Authorization", bearer(Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON).content(duplicate))
-                .andExpect(status().isBadRequest());
-
-        mockMvc.perform(patch(URL + "/customers/loyalty-grades")
-                        .header("Authorization", bearer(Role.STAFF))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"changes\":[{\"customerId\":999999,\"loyaltyGrade\":\"VIP\"}]}"))
-                .andExpect(status().isNotFound());
-
-        assertThat(customerRepository.findById(customer.getMemberId()).orElseThrow().getLoyaltyGrade())
-                .isEqualTo(LoyaltyGrade.NORMAL);
-    }
-
     private Customer saveCustomer(String name, LoyaltyGrade grade, boolean discountApplied) {
         Member member = memberRepository.save(Member.create(
                 "login-" + tag + "-" + name, "pw", name + tag, "01012345678", "서울", Role.CUSTOMER));

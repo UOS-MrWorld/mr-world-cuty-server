@@ -8,8 +8,6 @@ import com.mrworld.yaho.customer.dto.CustomerListRequest;
 import com.mrworld.yaho.customer.dto.CustomerSummaryResponse;
 import com.mrworld.yaho.customer.dto.DiscountRequest;
 import com.mrworld.yaho.customer.dto.DiscountResponse;
-import com.mrworld.yaho.customer.dto.LoyaltyGradeBatchUpdateRequest;
-import com.mrworld.yaho.customer.dto.LoyaltyGradeBatchUpdateResponse;
 import com.mrworld.yaho.customer.dto.LoyaltyPolicyResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// 직원용 고객 목록/상세 조회(/staff/customers), 고객별 단골 등급 일괄 변경, 단골 할인 등급별 일괄 적용, 단골 등급 기준 조회(/staff/loyalty-policy)
+// 직원용 고객 목록/상세 조회(/staff/customers), 단골 할인 등급별 일괄 적용, 단골 등급 기준 조회(/staff/loyalty-policy)
 @RestController
 @RequestMapping("/api/v1/staff")
 @RequiredArgsConstructor
@@ -73,29 +71,6 @@ public class CustomerController {
     })
     public ResponseEntity<CustomerDetailResponse> getCustomerDetail(@PathVariable Long customerId) {
         return ResponseEntity.ok(customerService.getCustomerDetail(customerId));
-    }
-
-    @PatchMapping("/customers/loyalty-grades")
-    @Operation(summary = "고객별 단골 등급 일괄 변경",
-            description = "여러 고객의 단골 등급을 한 요청과 한 트랜잭션으로 변경합니다. "
-                    + "등급만 바꾸며, 단골 할인은 등급별 일괄 적용으로 따로 켭니다.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "일괄 변경 완료", useReturnTypeSchema = true),
-            @ApiResponse(responseCode = "400", description = "빈 요청, 중복 고객 또는 등급 누락",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.BAD_REQUEST)
-                    )),
-            @ApiResponse(responseCode = "404", description = "존재하지 않는 고객 포함",
-                    content = @Content(
-                            schema = @Schema(implementation = ResultDto.class),
-                            examples = @ExampleObject(value = SwaggerExamples.NOT_FOUND)
-                    ))
-    })
-    public ResponseEntity<LoyaltyGradeBatchUpdateResponse> updateLoyaltyGrades(
-            @RequestBody @Valid LoyaltyGradeBatchUpdateRequest request
-    ) {
-        return ResponseEntity.ok(customerService.updateLoyaltyGrades(request));
     }
 
     @PatchMapping("/customers/loyalty-discount/by-grade")
