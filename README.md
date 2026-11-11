@@ -65,7 +65,7 @@ API 경로는 권한별로 나뉜다. 인증 없이 쓰는 `/api/v1/auth/**`, �
 | `booking` | `BookingController` | `/api/v1/customer/bookings/**` (생성, 목록, 상세, PENDING 수정, `cancel`), `/api/v1/customer/travel-history` |
 | `payment` | `PaymentController` | `/api/v1/customer/payments` |
 | `inventory` | `InventoryController` | `/api/v1/staff/inventory/**` (목록, 등록, 수정) |
-| `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-grades` 등급 일괄 변경, `loyalty-discount/by-grade`), `/api/v1/staff/loyalty-policy` |
+| `customer` | `CustomerController` | `/api/v1/staff/customers/**` (목록, 상세, `loyalty-discount/by-grade`), `/api/v1/staff/loyalty-policy` |
 
 `tour`, `customer` 패키지는 고객용/직원용 API를 컨트롤러 하나가 함께 제공한다(설계 산출물의 `TourController`, `CustomerController`와 동일). 전체 요청·응답 형식은 노션 API 명세서와 Swagger UI에서 확인한다.
 
